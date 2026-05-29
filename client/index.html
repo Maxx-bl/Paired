@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paired</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── Screen 1: Choose username ─────────────────────────────────────────── -->
+  <div id="screen-login" class="screen active">
+    <div class="card">
+      <div class="brand">
+        <span class="brand-name">Paired</span>
+      </div>
+      <p class="tagline">Conversation chiffrée, anonyme et éphémère.</p>
+
+      <div class="label-row">
+        <label class="input-label" for="username-input">Pseudo</label>
+        <button id="generate-btn" class="btn-link">Générer</button>
+      </div>
+      <input id="username-input" type="text" placeholder="ex: bluewolf42" maxlength="20" autocomplete="off" spellcheck="false">
+      <div id="username-status" class="field-status"></div>
+
+      <button id="next-btn" class="btn-primary" disabled>Continuer</button>
+    </div>
+  </div>
+
+  <!-- ── Screen 2: Connect to partner ──────────────────────────────────────── -->
+  <div id="screen-connect" class="screen">
+    <div class="card">
+      <button id="back-btn" class="btn-back">Retour</button>
+
+      <div class="my-name-box">
+        <span class="input-label">Votre pseudo</span>
+        <div class="name-row">
+          <strong id="my-username-display" class="my-name"></strong>
+          <button id="copy-btn" class="btn-link">Copier</button>
+        </div>
+        <p class="hint">Partagez ce pseudo avec votre interlocuteur</p>
+      </div>
+
+      <div class="separator">Pseudo de votre correspondant</div>
+
+      <input id="partner-input" type="text" placeholder="Pseudo..." maxlength="20" autocomplete="off" spellcheck="false">
+      <div id="connect-status" class="field-status"></div>
+
+      <button id="connect-btn" class="btn-primary">Se connecter</button>
+    </div>
+  </div>
+
+  <!-- ── Screen 3: Chat ────────────────────────────────────────────────────── -->
+  <div id="screen-chat" class="screen">
+
+    <div class="chat-header">
+      <div class="header-left">
+        <div class="presence-dot"></div>
+        <span id="chat-with" class="partner-name"></span>
+      </div>
+      <div class="header-right">
+        <span id="timer" class="timer">60:00</span>
+        <button id="leave-btn" class="btn-leave">Quitter</button>
+      </div>
+    </div>
+
+    <div id="messages" class="messages"></div>
+
+    <div id="drop-overlay" class="drop-overlay">
+      <span class="drop-label">Déposer ici</span>
+    </div>
+
+    <div id="progress-container" class="progress-wrap" style="display:none">
+      <div class="progress-meta">
+        <span id="progress-direction" class="progress-dir">Envoi</span>
+        <span id="progress-filename" class="progress-name"></span>
+        <span id="progress-pct" class="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div id="file-progress" class="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="chat-footer">
+      <div id="drop-hint" class="drop-hint">
+        <span id="drop-hint-text">Glisser un fichier ici ou cliquer</span>
+      </div>
+      <div class="input-row">
+        <input id="message-input" type="text" placeholder="Message" autocomplete="off" spellcheck="false">
+        <button id="send-btn" class="btn-send">Envoyer</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/crypto.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/login.js"></script>
+  <script src="js/chat.js"></script>
+</body>
+</html>
