@@ -136,6 +136,42 @@ function resetLoginScreens() {
   clearInviteCards();
 }
 
+// ── Invitation sync (called by Firebase value listener) ───────────────────────
+
+function syncInviteCards(snap) {
+  if (state.roomId || state.leaving) return;
+
+  const active = new Set();
+
+  if (snap.exists()) {
+    snap.forEach(child => {
+      const { from, roomId } = child.val();
+      if (!from || !roomId) return;
+      active.add(roomId);
+
+      // Mutual invite: both users clicked "Se connecter" on each other → auto-accept
+      if (state.pendingRoomId && state.pendingPartner === from && !state.joiningRoom) {
+        if (state.username < from) return; // we're initiator, skip
+        state.joiningRoom = true;
+        cancelPendingConnection()
+          .then(() => acceptInvitation(from, roomId))
+          .catch(() => { state.joiningRoom = false; });
+        return;
+      }
+
+      showInviteCard(from, roomId);
+    });
+  }
+
+  // Remove cards whose invite was withdrawn from Firebase
+  document.querySelectorAll('#invitations-list .invite-card').forEach(card => {
+    if (!active.has(card.dataset.roomId)) card.remove();
+  });
+
+  const list = document.getElementById('invitations-list');
+  list.style.display = list.childElementCount > 0 ? 'flex' : 'none';
+}
+
 // ── Invitation cards UI ───────────────────────────────────────────────────────
 
 function showInviteCard(from, roomId) {

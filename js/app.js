@@ -71,11 +71,10 @@ async function registerUsername(username) {
 
   state.username = username;
 
-  // Listen for incoming invitations — child_added fires for each existing + new invite
+  // value fires on connect, reconnect, and any change — more reliable than child_added on mobile
   const invRef = db.ref(`invites/${username}`);
   await invRef.onDisconnect().remove();
-  invRef.on('child_added',   handleIncomingInvite);
-  invRef.on('child_removed', (snap) => removeInviteCard(snap.key));
+  invRef.on('value', syncInviteCards);
 }
 
 // ── Unregister user (frees the username, cleans Firebase presence) ─────────────
@@ -141,6 +140,10 @@ async function requestConnection(partnerUsername) {
     }
   }
 
+  // Check partner is online before sending invite
+  const presSnap = await db.ref(`presence/${partnerUsername}`).once('value');
+  if (!presSnap.exists()) throw new Error('Utilisateur introuvable');
+
   const roomId = generateUUID();
   state.pendingRoomId  = roomId;
   state.pendingPartner = partnerUsername;
@@ -190,24 +193,6 @@ async function requestConnection(partnerUsername) {
     setStatus('connect-status', `${partnerUsername} a refusé la connexion`, 'error');
     document.getElementById('connect-btn').disabled = false;
   });
-}
-
-// ── Handle incoming invitation ────────────────────────────────────────────────
-async function handleIncomingInvite(snap) {
-  if (!snap.exists() || state.roomId || state.leaving) return;
-  const { from, roomId } = snap.val();
-  if (!from || !roomId) return;
-
-  // Mutual invitation: both users clicked "Se connecter" on each other → auto-accept
-  if (state.pendingRoomId && state.pendingPartner === from) {
-    if (state.username < from) return; // we're initiator, ignore their invite
-    await cancelPendingConnection();
-    await acceptInvitation(from, roomId);
-    return;
-  }
-
-  // Show invitation card for the user to accept or decline
-  showInviteCard(from, roomId);
 }
 
 // ── Accept an invitation ──────────────────────────────────────────────────────
