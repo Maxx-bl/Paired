@@ -287,6 +287,7 @@ async function enterRoom(roomId, partnerUsername, role, sessionDuration = 60) {
   showScreen('chat');
   initChatScreen(partnerUsername);
   startTimer(sessionDuration * 60);
+  document.getElementById('security-btn').style.display = '';
 
   if (role === 'initiator') await webrtcMgr.createOffer();
 }
@@ -391,6 +392,9 @@ async function endSession() {
 
   state.leaving = false;
 
+  document.getElementById('security-btn').style.display   = 'none';
+  document.getElementById('security-modal').style.display = 'none';
+
   showScreen('login');
   resetLoginScreens();
 }
@@ -432,3 +436,20 @@ function setStatus(id, text, type) {
   el.textContent = text;
   el.className   = `field-status ${type}`;
 }
+
+// ── Security code modal ────────────────────────────────────────────────────────
+document.getElementById('security-btn').addEventListener('click', async () => {
+  const groups = await cryptoMgr.securityCode();
+  if (!groups) return;
+  const display = document.getElementById('security-code-display');
+  display.innerHTML = groups.map((g) => `<span class="code-group">${g}</span>`).join('');
+  document.getElementById('security-modal').style.display = 'flex';
+});
+
+document.getElementById('security-modal-close').addEventListener('click', () => {
+  document.getElementById('security-modal').style.display = 'none';
+});
+
+document.getElementById('security-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+});
