@@ -14,6 +14,9 @@ function initChatScreen(partnerUsername) {
   fileBtn.disabled = false;
   fileBtn.title    = isTouch ? 'Appuyer pour joindre un fichier' : 'Joindre un fichier (ou glisser-déposer)';
 
+  const badge = document.getElementById('conn-type-badge');
+  if (badge) badge.style.display = 'none';
+
   appendSystemMessage('Chiffré de bout en bout — messages et fichiers détruits à la déconnexion');
   setupDragAndDrop();
 }

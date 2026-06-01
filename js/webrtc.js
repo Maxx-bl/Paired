@@ -29,8 +29,9 @@ async function fetchIceServers() {
   }
 }
 
-const CHUNK_SIZE = 64 * 1024;
-const BUFFER_THRESHOLD = 16 * 1024 * 1024;
+const CHUNK_SIZE      = 256 * 1024;  // 256 KB
+const HIGH_WATERMARK  = 1024 * 1024; // 1 MB — pause l'envoi au-delà
+const LOW_WATERMARK   = 256 * 1024;  // 256 KB — reprend l'envoi en-dessous
 
 class WebRTCManager {
   constructor() {
@@ -44,6 +45,7 @@ class WebRTCManager {
     this.onSendProgress    = null;
     this.onReceiveProgress = null;
     this.onChannelOpen     = null;
+    this.onConnectionType  = null;
 
     this.pc         = null;
     this.channel    = null;
@@ -64,8 +66,13 @@ class WebRTCManager {
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) this.sendIce?.(candidate);
     };
-    pc.oniceconnectionstatechange = () => console.log('[ICE] state:', pc.iceConnectionState);
-    pc.onconnectionstatechange    = () => console.log('[PC]  state:', pc.connectionState);
+    pc.oniceconnectionstatechange = () => {
+      console.log('[ICE] state:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        this._detectConnectionType();
+      }
+    };
+    pc.onconnectionstatechange = () => console.log('[PC]  state:', pc.connectionState);
     return pc;
   }
 
@@ -113,6 +120,7 @@ class WebRTCManager {
 
   _setupChannel(ch) {
     ch.binaryType = 'arraybuffer';
+    ch.bufferedAmountLowThreshold = LOW_WATERMARK;
     ch.onopen     = () => { console.log('[DC] channel open'); this.onChannelOpen?.(); };
     ch.onclose    = () => console.log('[DC] channel closed');
     ch.onerror    = (e) => console.error('[DC] channel error:', e);
@@ -151,8 +159,9 @@ class WebRTCManager {
 
     let offset = 0;
     while (offset < file.size) {
-      while (this.channel.bufferedAmount > BUFFER_THRESHOLD) {
-        await new Promise((r) => setTimeout(r, 50));
+      if (this.channel.bufferedAmount > HIGH_WATERMARK) {
+        await new Promise((resolve) => { this.channel.onbufferedamountlow = resolve; });
+        this.channel.onbufferedamountlow = null;
       }
       const slice = await readAsArrayBuffer(file.slice(offset, offset + CHUNK_SIZE));
       this.channel.send(slice);
@@ -161,6 +170,21 @@ class WebRTCManager {
     }
 
     this.channel.send(JSON.stringify({ type: 'file-end' }));
+  }
+
+  async _detectConnectionType() {
+    try {
+      const stats = await this.pc.getStats();
+      let localCandidateId = null;
+      stats.forEach((r) => {
+        if (r.type === 'candidate-pair' && (r.state === 'succeeded' || r.nominated)) {
+          localCandidateId = r.localCandidateId;
+        }
+      });
+      if (!localCandidateId) return;
+      const local = stats.get(localCandidateId);
+      this.onConnectionType?.(local?.candidateType === 'relay' ? 'TURN' : 'P2P');
+    } catch {}
   }
 
   isReady() {

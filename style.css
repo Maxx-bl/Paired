@@ -295,6 +295,16 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   flex-shrink: 0;
 }
 .partner-name { font-size: 15px; font-weight: 600; }
+.conn-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+.conn-badge.p2p  { background: color-mix(in srgb, var(--ok)   15%, var(--surface2)); color: var(--ok); }
+.conn-badge.turn { background: color-mix(in srgb, var(--warn)  15%, var(--surface2)); color: var(--warn); }
 .header-right { display: flex; align-items: center; gap: 18px; }
 
 .timer {
