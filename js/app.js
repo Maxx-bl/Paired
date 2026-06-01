@@ -17,6 +17,7 @@ const state = {
   invitePoller:       null,  // fallback polling when WebSocket listener is unreliable (mobile)
   pendingRoomId:      null,
   pendingPartner:     null,
+  pendingDuration:    60,    // minutes, stored when sending an invite
   pendingKeyRef:      null,  // Firebase ref listened for partner's key acceptance
   pendingDeclinedRef: null,  // Firebase ref listened for partner's decline
   leaving:            false, // true during endSession (blocks ghost notifications)
@@ -47,14 +48,6 @@ webrtcMgr.onConnectionType  = (type) => {
 webrtcMgr.onFileReceived    = ({ blob, name, size }) => { hideProgress(); appendFileMessage({ blob, name, size, isOwn: false }); };
 webrtcMgr.onReceiveProgress = (pct, name) => showProgress(name, pct, false);
 webrtcMgr.onSendProgress    = (pct, name) => { showProgress(name, pct, true); if (pct >= 1) setTimeout(hideProgress, 800); };
-
-// ── UUID (crypto.randomUUID absent sur certains navigateurs mobiles) ──────────
-function generateUUID() {
-  if (crypto.randomUUID) return crypto.randomUUID();
-  return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-  );
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 function showScreen(name) {
@@ -119,6 +112,7 @@ async function cancelPendingConnection() {
   state.pendingDeclinedRef = null;
   state.pendingRoomId      = null;
   state.pendingPartner     = null;
+  state.pendingDuration    = 60;
 
   if (pendingRoomId) {
     await db.ref(`rooms/${pendingRoomId}`).onDisconnect().cancel();
@@ -145,8 +139,8 @@ async function goBack() {
 }
 
 // ── Request connection to partner ─────────────────────────────────────────────
-async function requestConnection(partnerUsername) {
-  // If the partner already sent us an invite, accept it directly instead of sending a new one
+async function requestConnection(partnerUsername, ownDuration = 60) {
+  // If the partner already sent us an invite, accept it directly (they are the initiator)
   const existingSnap = await db.ref(`invites/${state.username}`).once('value');
   if (existingSnap.exists()) {
     let theirInvite = null;
@@ -154,7 +148,7 @@ async function requestConnection(partnerUsername) {
       if (child.val().from === partnerUsername) { theirInvite = child.val(); return true; }
     });
     if (theirInvite) {
-      await acceptInvitation(partnerUsername, theirInvite.roomId);
+      await acceptInvitation(partnerUsername, theirInvite.roomId, theirInvite.duration || 60);
       return;
     }
   }
@@ -164,8 +158,9 @@ async function requestConnection(partnerUsername) {
   if (!presSnap.exists()) throw new Error('Utilisateur introuvable');
 
   const roomId = generateUUID();
-  state.pendingRoomId  = roomId;
-  state.pendingPartner = partnerUsername;
+  state.pendingRoomId    = roomId;
+  state.pendingPartner   = partnerUsername;
+  state.pendingDuration  = ownDuration;
 
   await db.ref(`rooms/${roomId}`).onDisconnect().remove();
 
@@ -174,7 +169,7 @@ async function requestConnection(partnerUsername) {
 
   const invRef = db.ref(`invites/${partnerUsername}/${roomId}`);
   await invRef.onDisconnect().remove();
-  await invRef.set({ from: state.username, roomId, ts: firebase.database.ServerValue.TIMESTAMP });
+  await invRef.set({ from: state.username, roomId, duration: ownDuration, ts: firebase.database.ServerValue.TIMESTAMP });
 
   // Listen for partner's key — their acceptance signal
   const partnerKeyRef = db.ref(`rooms/${roomId}/keys/${partnerUsername}`);
@@ -189,11 +184,15 @@ async function requestConnection(partnerUsername) {
     state.pendingKeyRef      = null;
     state.pendingDeclinedRef = null;
 
+    // Read the session duration resolved by the receiver (handles mutual-invite max)
+    const durationSnap = await db.ref(`rooms/${roomId}/sessionDuration`).once('value');
+    const sessionDuration = durationSnap.exists() ? durationSnap.val() : (state.pendingDuration || 60);
+
     state.joiningRoom = true;
     try {
       await cryptoMgr.deriveSharedKey(snap.val());
       state.cryptoReady = true;
-      await enterRoom(roomId, partnerUsername, 'initiator');
+      await enterRoom(roomId, partnerUsername, 'initiator', sessionDuration);
     } finally {
       state.joiningRoom = false;
     }
@@ -215,13 +214,19 @@ async function requestConnection(partnerUsername) {
 }
 
 // ── Accept an invitation ──────────────────────────────────────────────────────
-async function acceptInvitation(from, roomId) {
+// theirDuration: session duration from the invite sender (minutes)
+// ownPendingDuration: our own pending duration if this is a mutual invite (null otherwise)
+async function acceptInvitation(from, roomId, theirDuration = 60, ownPendingDuration = null) {
   if (state.roomId || state.joiningRoom || state.leaving) return;
 
   clearInviteCards();
 
   // Cancel any unrelated outgoing pending invite
   if (state.pendingRoomId) await cancelPendingConnection();
+
+  const sessionDuration = ownPendingDuration !== null
+    ? Math.max(theirDuration, ownPendingDuration)
+    : theirDuration;
 
   state.joiningRoom = true;
   try {
@@ -232,10 +237,12 @@ async function acceptInvitation(from, roomId) {
     await cryptoMgr.deriveSharedKey(initiatorKeySnap.val());
     state.cryptoReady = true;
 
+    // Write resolved duration BEFORE writing our key so the initiator can read it reliably
+    await db.ref(`rooms/${roomId}/sessionDuration`).set(sessionDuration);
     await db.ref(`rooms/${roomId}/keys/${state.username}`).set(myPublicKey);
     await db.ref(`invites/${state.username}`).remove();
 
-    await enterRoom(roomId, from, 'receiver');
+    await enterRoom(roomId, from, 'receiver', sessionDuration);
   } finally {
     state.joiningRoom = false;
   }
@@ -249,7 +256,7 @@ async function rejectInvitation(from, roomId) {
 }
 
 // ── Enter room ────────────────────────────────────────────────────────────────
-async function enterRoom(roomId, partnerUsername, role) {
+async function enterRoom(roomId, partnerUsername, role, sessionDuration = 60) {
   clearInterval(state.invitePoller);
   state.invitePoller    = null;
   state.roomId          = roomId;
@@ -278,7 +285,7 @@ async function enterRoom(roomId, partnerUsername, role) {
 
   showScreen('chat');
   initChatScreen(partnerUsername);
-  startTimer(3600);
+  startTimer(sessionDuration * 60);
 
   if (role === 'initiator') await webrtcMgr.createOffer();
 }
@@ -391,12 +398,17 @@ async function endSession() {
 function startTimer(seconds) {
   let remaining = seconds;
   const el = document.getElementById('timer');
-  state.timerInterval = setInterval(() => {
-    remaining--;
+  el.classList.remove('timer-warning');
+  const update = () => {
     const m = String(Math.floor(remaining / 60)).padStart(2, '0');
     const s = String(remaining % 60).padStart(2, '0');
     el.textContent = `${m}:${s}`;
     if (remaining <= 60) el.classList.add('timer-warning');
+  };
+  update();
+  state.timerInterval = setInterval(() => {
+    remaining--;
+    update();
     if (remaining <= 0) endSession();
   }, 1000);
 }
