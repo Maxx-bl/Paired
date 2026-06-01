@@ -36,9 +36,10 @@ class WebRTCManager {
     this.pc      = null;
     this.channel = null;
 
-    this._recvChunks = [];
-    this._recvSize   = 0;
-    this._recvMeta   = null;
+    this._recvChunks    = [];
+    this._recvSize      = 0;
+    this._recvMeta      = null;
+    this._pendingIce    = []; // candidates queued before remoteDescription is set
   }
 
   _createPC() {
@@ -66,19 +67,29 @@ class WebRTCManager {
       this._setupChannel(this.channel);
     };
     await this.pc.setRemoteDescription(offer);
+    await this._flushPendingIce();
     const answer = await this.pc.createAnswer();
     await this.pc.setLocalDescription(answer);
     this.sendAnswer?.(this.pc.localDescription);
   }
 
   async handleAnswer(answer) {
-    await this.pc?.setRemoteDescription(answer);
+    if (!this.pc) return;
+    await this.pc.setRemoteDescription(answer);
+    await this._flushPendingIce();
   }
 
   async addIceCandidate(candidate) {
     if (this.pc?.remoteDescription) {
       await this.pc.addIceCandidate(candidate);
+    } else {
+      this._pendingIce.push(candidate);
     }
+  }
+
+  async _flushPendingIce() {
+    for (const c of this._pendingIce) await this.pc.addIceCandidate(c);
+    this._pendingIce = [];
   }
 
   _setupChannel(ch) {
@@ -138,7 +149,8 @@ class WebRTCManager {
   destroy() {
     this.channel?.close();
     this.pc?.close();
-    this.channel = null;
-    this.pc      = null;
+    this.channel     = null;
+    this.pc          = null;
+    this._pendingIce = [];
   }
 }
