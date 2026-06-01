@@ -14,6 +14,7 @@ const state = {
   role:               null,
   cryptoReady:        false,
   timerInterval:      null,
+  timerEndTime:       null,
   invitePoller:       null,  // fallback polling when WebSocket listener is unreliable (mobile)
   pendingRoomId:      null,
   pendingPartner:     null,
@@ -396,26 +397,33 @@ async function endSession() {
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
 function startTimer(seconds) {
-  let remaining = seconds;
+  state.timerEndTime = Date.now() + seconds * 1000;
   const el = document.getElementById('timer');
   el.classList.remove('timer-warning');
   const update = () => {
+    const remaining = Math.max(0, Math.ceil((state.timerEndTime - Date.now()) / 1000));
     const m = String(Math.floor(remaining / 60)).padStart(2, '0');
     const s = String(remaining % 60).padStart(2, '0');
     el.textContent = `${m}:${s}`;
     if (remaining <= 60) el.classList.add('timer-warning');
+    if (remaining <= 0) { endSession(); return; }
   };
   update();
-  state.timerInterval = setInterval(() => {
-    remaining--;
-    update();
-    if (remaining <= 0) endSession();
-  }, 1000);
+  state.timerInterval = setInterval(update, 1000);
+  document.addEventListener('visibilitychange', _onVisibilityChange);
+}
+
+function _onVisibilityChange() {
+  if (!document.hidden && state.timerEndTime !== null && Date.now() >= state.timerEndTime) {
+    endSession();
+  }
 }
 
 function stopTimer() {
   clearInterval(state.timerInterval);
   state.timerInterval = null;
+  state.timerEndTime  = null;
+  document.removeEventListener('visibilitychange', _onVisibilityChange);
 }
 
 function setStatus(id, text, type) {
