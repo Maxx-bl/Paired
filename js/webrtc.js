@@ -176,14 +176,18 @@ class WebRTCManager {
     try {
       const stats = await this.pc.getStats();
       let localCandidateId = null;
+      let remoteCandidateId = null;
       stats.forEach((r) => {
         if (r.type === 'candidate-pair' && (r.state === 'succeeded' || r.nominated)) {
-          localCandidateId = r.localCandidateId;
+          localCandidateId  = r.localCandidateId;
+          remoteCandidateId = r.remoteCandidateId;
         }
       });
       if (!localCandidateId) return;
-      const local = stats.get(localCandidateId);
-      this.onConnectionType?.(local?.candidateType === 'relay' ? 'TURN' : 'P2P');
+      const local  = stats.get(localCandidateId);
+      const remote = stats.get(remoteCandidateId);
+      const usesRelay = local?.candidateType === 'relay' || remote?.candidateType === 'relay';
+      this.onConnectionType?.(usesRelay ? 'TURN' : 'P2P');
     } catch {}
   }
 
