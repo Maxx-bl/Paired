@@ -37,6 +37,13 @@ webrtcMgr.onChannelOpen = () => {
     : 'Connexion directe active — glisser un fichier ici';
   btn.classList.add('p2p-ready');
 };
+webrtcMgr.onConnectionType  = (type) => {
+  const badge = document.getElementById('conn-type-badge');
+  if (!badge) return;
+  badge.textContent = type;
+  badge.className   = `conn-badge ${type.toLowerCase()}`;
+  badge.style.display = '';
+};
 webrtcMgr.onFileReceived    = ({ blob, name, size }) => { hideProgress(); appendFileMessage({ blob, name, size, isOwn: false }); };
 webrtcMgr.onReceiveProgress = (pct, name) => showProgress(name, pct, false);
 webrtcMgr.onSendProgress    = (pct, name) => { showProgress(name, pct, true); if (pct >= 1) setTimeout(hideProgress, 800); };
@@ -333,7 +340,6 @@ function setupPartnerLeftListener(roomId) {
       document.getElementById('message-input').disabled = true;
       document.getElementById('send-btn').disabled = true;
       document.getElementById('file-btn').disabled = true;
-      stopTimer();
     }
   });
 }
@@ -390,7 +396,7 @@ function startTimer(seconds) {
     const m = String(Math.floor(remaining / 60)).padStart(2, '0');
     const s = String(remaining % 60).padStart(2, '0');
     el.textContent = `${m}:${s}`;
-    if (remaining <= 300) el.classList.add('timer-warning');
+    if (remaining <= 60) el.classList.add('timer-warning');
     if (remaining <= 0) endSession();
   }, 1000);
 }
