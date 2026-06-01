@@ -128,6 +128,19 @@ async function goBack() {
 
 // ── Request connection to partner ─────────────────────────────────────────────
 async function requestConnection(partnerUsername) {
+  // If the partner already sent us an invite, accept it directly instead of sending a new one
+  const existingSnap = await db.ref(`invites/${state.username}`).once('value');
+  if (existingSnap.exists()) {
+    let theirInvite = null;
+    existingSnap.forEach(child => {
+      if (child.val().from === partnerUsername) { theirInvite = child.val(); return true; }
+    });
+    if (theirInvite) {
+      await acceptInvitation(partnerUsername, theirInvite.roomId);
+      return;
+    }
+  }
+
   const roomId = generateUUID();
   state.pendingRoomId  = roomId;
   state.pendingPartner = partnerUsername;
