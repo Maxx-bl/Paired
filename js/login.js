@@ -3,7 +3,7 @@ const ADJECTIVES = [
   'Ash', 'Iron', 'Neon', 'Void', 'Dawn', 'Dusk', 'Grim', 'Keen', 'Lone', 'Bare',
   'Jade', 'Onyx', 'Crisp', 'Blaze', 'Shade', 'Sleek', 'Stark', 'Thorn', 'Brisk', 'Gust',
   'Cold', 'Sage', 'Rash', 'Ebon', 'Glow', 'Hazy', 'Icy', 'Murk', 'Pale', 'Raw',
-  'Sly', 'Tame', 'Wry', 'Dull', 'Fleet', 'Gruff', 'Hardy'
+  'Sly', 'Tame', 'Wry', 'Dull', 'Fleet', 'Gruff', 'Hardy', 'Legendary'
 ];
 
 const NOUNS = [
@@ -61,8 +61,8 @@ document.getElementById('next-btn').addEventListener('click', async () => {
 });
 
 async function triggerCheck(val) {
-  if (!/^[a-z0-9_]{3,20}$/.test(val)) {
-    setStatus('username-status', 'Lettres, chiffres et _ uniquement', 'error');
+  if (!/^[a-z0-9]{3,20}$/.test(val)) {
+    setStatus('username-status', 'Lettres et chiffres uniquement', 'error');
     document.getElementById('next-btn').disabled = true;
     return;
   }
@@ -121,16 +121,35 @@ document.getElementById('partner-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('connect-btn').click();
 });
 
+document.getElementById('duration-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { document.getElementById('connect-btn').click(); return; }
+  // Allow: backspace, delete, tab, arrows, home, end
+  if (['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+  // Block anything that's not a digit
+  if (!/^\d$/.test(e.key)) e.preventDefault();
+});
+
+document.getElementById('duration-input').addEventListener('input', (e) => {
+  let val = parseInt(e.target.value, 10);
+  if (isNaN(val) || val < 1) {
+    e.target.value = '';
+  } else if (val > 60) {
+    e.target.value = '60';
+  }
+});
+
 document.getElementById('connect-btn').addEventListener('click', async () => {
   const partner = document.getElementById('partner-input').value.trim();
   if (!partner) return;
   if (partner === state.username) {
     return setStatus('connect-status', 'Vous ne pouvez pas vous connecter à vous-même', 'error');
   }
+  const durationVal = parseInt(document.getElementById('duration-input').value, 10);
+  const duration = (!isNaN(durationVal) && durationVal >= 1 && durationVal <= 60) ? durationVal : 60;
   document.getElementById('connect-btn').disabled = true;
   setStatus('connect-status', `En attente de ${partner}…`, 'waiting');
   try {
-    await requestConnection(partner);
+    await requestConnection(partner, duration);
   } catch (err) {
     setStatus('connect-status', err.message, 'error');
     document.getElementById('connect-btn').disabled = false;
@@ -144,6 +163,7 @@ function resetLoginScreens() {
   setStatus('username-status', '', '');
   document.getElementById('next-btn').disabled = true;
   document.getElementById('partner-input').value = '';
+  document.getElementById('duration-input').value = '';
   setStatus('connect-status', '', '');
   document.getElementById('connect-btn').disabled = false;
   clearInviteCards();
@@ -165,21 +185,23 @@ function syncInviteCards(snap) {
 
   if (snap.exists()) {
     snap.forEach(child => {
-      const { from, roomId } = child.val();
+      const { from, roomId, duration: theirDuration } = child.val();
       if (!from || !roomId) return;
       active.add(roomId);
 
-      // Mutual invite: both users clicked "Se connecter" on each other → auto-accept
+      // Mutual invite: both users clicked "Se connecter" on each other → auto-accept with max duration
       if (state.pendingRoomId && state.pendingPartner === from && !state.joiningRoom) {
         if (state.username < from) return; // we're initiator, skip
         state.joiningRoom = true;
+        const ownDuration = state.pendingDuration || 60;
+        const inviteDuration = theirDuration || 60;
         cancelPendingConnection()
-          .then(() => acceptInvitation(from, roomId))
+          .then(() => acceptInvitation(from, roomId, inviteDuration, ownDuration))
           .catch(() => { state.joiningRoom = false; });
         return;
       }
 
-      showInviteCard(from, roomId);
+      showInviteCard(from, roomId, theirDuration || 60);
     });
   }
 
@@ -194,7 +216,7 @@ function syncInviteCards(snap) {
 
 // ── Invitation cards UI ───────────────────────────────────────────────────────
 
-function showInviteCard(from, roomId) {
+function showInviteCard(from, roomId, theirDuration = 60) {
   const list = document.getElementById('invitations-list');
 
   // Avoid duplicates
@@ -222,7 +244,7 @@ function showInviteCard(from, roomId) {
   acceptBtn.addEventListener('click', async () => {
     acceptBtn.disabled = true;
     declineBtn.disabled = true;
-    await acceptInvitation(from, roomId);
+    await acceptInvitation(from, roomId, theirDuration);
   });
 
   declineBtn.addEventListener('click', async () => {

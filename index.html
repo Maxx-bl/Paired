@@ -21,7 +21,7 @@
         <label class="input-label" for="username-input">Pseudo</label>
         <button id="generate-btn" class="btn-link">Générer</button>
       </div>
-      <input id="username-input" type="text" placeholder="ex: bluewolf42" maxlength="20" autocomplete="off" spellcheck="false">
+      <input id="username-input" type="text" placeholder="ex: legendaryeagle67" maxlength="20" autocomplete="off" spellcheck="false">
       <div id="username-status" class="field-status"></div>
 
       <button id="next-btn" class="btn-primary" disabled>Continuer</button>
@@ -44,7 +44,11 @@
 
       <div class="separator">Connexion</div>
 
-      <input id="partner-input" type="text" placeholder="Pseudo..." maxlength="20" autocomplete="off" spellcheck="false">
+      <div class="connect-inputs">
+        <input id="partner-input" type="text" placeholder="Pseudo..." maxlength="20" autocomplete="off" spellcheck="false">
+        <input id="duration-input" type="number" min="1" max="60" placeholder="60" class="duration-input" title="Durée de session en minutes">
+        <span class="duration-unit">min</span>
+      </div>
       <div id="connect-status" class="field-status"></div>
 
       <div id="invitations-list" class="invitations-list"></div>
