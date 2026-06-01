@@ -9,13 +9,25 @@ function readAsArrayBuffer(blob) {
   });
 }
 
-const ICE_SERVERS = [
+const TURN_WORKER_URL = 'https://paired-turn.max13-bl.workers.dev/';
+
+const STUN_ONLY = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'turn:openrelay.metered.ca:80',                username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:80?transport=tcp',  username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:openrelay.metered.ca:443',              username: 'openrelayproject', credential: 'openrelayproject' },
 ];
+
+async function fetchIceServers() {
+  try {
+    const res = await fetch(TURN_WORKER_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const servers = await res.json();
+    console.log('[TURN] credentials OK:', JSON.stringify(servers));
+    return servers;
+  } catch (err) {
+    console.warn('[TURN] credentials unavailable, falling back to STUN only:', err);
+    return STUN_ONLY;
+  }
+}
 
 const CHUNK_SIZE = 64 * 1024;
 const BUFFER_THRESHOLD = 16 * 1024 * 1024;
@@ -33,20 +45,27 @@ class WebRTCManager {
     this.onReceiveProgress = null;
     this.onChannelOpen     = null;
 
-    this.pc      = null;
-    this.channel = null;
+    this.pc         = null;
+    this.channel    = null;
+    this.iceServers = STUN_ONLY;
 
-    this._recvChunks    = [];
-    this._recvSize      = 0;
-    this._recvMeta      = null;
-    this._pendingIce    = []; // candidates queued before remoteDescription is set
+    this._recvChunks = [];
+    this._recvSize   = 0;
+    this._recvMeta   = null;
+    this._pendingIce = [];
+  }
+
+  async loadIceServers() {
+    this.iceServers = await fetchIceServers();
   }
 
   _createPC() {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: this.iceServers });
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) this.sendIce?.(candidate);
     };
+    pc.oniceconnectionstatechange = () => console.log('[ICE] state:', pc.iceConnectionState);
+    pc.onconnectionstatechange    = () => console.log('[PC]  state:', pc.connectionState);
     return pc;
   }
 
@@ -94,7 +113,9 @@ class WebRTCManager {
 
   _setupChannel(ch) {
     ch.binaryType = 'arraybuffer';
-    ch.onopen     = () => this.onChannelOpen?.();
+    ch.onopen     = () => { console.log('[DC] channel open'); this.onChannelOpen?.(); };
+    ch.onclose    = () => console.log('[DC] channel closed');
+    ch.onerror    = (e) => console.error('[DC] channel error:', e);
 
     ch.onmessage = (e) => {
       if (typeof e.data === 'string') {

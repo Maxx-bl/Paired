@@ -263,6 +263,8 @@ async function enterRoom(roomId, partnerUsername, role) {
     });
   }
 
+  await webrtcMgr.loadIceServers();
+
   setupWebRTCSignaling(roomId, role);
   setupMessageListener(roomId);
   setupPartnerLeftListener(roomId);
