@@ -179,7 +179,10 @@ async function sendFile(file) {
   try {
     await webrtcMgr.sendFile(file);
   } catch (err) {
-    appendSystemMessage(`Erreur lors de l'envoi de « ${file.name} » : ${err.message}`);
+    hideProgress();
+    if (err.name !== 'AbortError') {
+      appendSystemMessage(`Erreur lors de l'envoi de « ${file.name} » : ${err.message}`);
+    }
   }
 }
 

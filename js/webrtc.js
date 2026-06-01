@@ -55,6 +55,7 @@ class WebRTCManager {
     this._recvSize   = 0;
     this._recvMeta   = null;
     this._pendingIce = [];
+    this._sendAbort  = null;
   }
 
   async loadIceServers() {
@@ -122,8 +123,8 @@ class WebRTCManager {
     ch.binaryType = 'arraybuffer';
     ch.bufferedAmountLowThreshold = LOW_WATERMARK;
     ch.onopen     = () => { console.log('[DC] channel open'); this.onChannelOpen?.(); };
-    ch.onclose    = () => console.log('[DC] channel closed');
-    ch.onerror    = (e) => console.error('[DC] channel error:', e);
+    ch.onclose    = () => { console.log('[DC] channel closed'); this._sendAbort?.abort(); };
+    ch.onerror    = (e) => { console.error('[DC] channel error:', e); this._sendAbort?.abort(); };
 
     ch.onmessage = (e) => {
       if (typeof e.data === 'string') {
@@ -150,26 +151,45 @@ class WebRTCManager {
   async sendFile(file) {
     if (!this.isReady()) throw new Error('Canal P2P non disponible');
 
-    this.channel.send(JSON.stringify({
-      type: 'file-start',
-      name: file.name,
-      size: file.size,
-      mime: file.type || 'application/octet-stream',
-    }));
+    const abort = new AbortController();
+    this._sendAbort = abort;
 
-    let offset = 0;
-    while (offset < file.size) {
-      if (this.channel.bufferedAmount > HIGH_WATERMARK) {
-        await new Promise((resolve) => { this.channel.onbufferedamountlow = resolve; });
-        this.channel.onbufferedamountlow = null;
+    const checkAbort = () => {
+      if (abort.signal.aborted) throw new DOMException('Transfer cancelled', 'AbortError');
+    };
+
+    try {
+      this.channel.send(JSON.stringify({
+        type: 'file-start',
+        name: file.name,
+        size: file.size,
+        mime: file.type || 'application/octet-stream',
+      }));
+
+      let offset = 0;
+      while (offset < file.size) {
+        checkAbort();
+        if (this.channel.bufferedAmount > HIGH_WATERMARK) {
+          await new Promise((resolve, reject) => {
+            const onLow   = () => { abort.signal.removeEventListener('abort', onAbort); resolve(); };
+            const onAbort = () => { this.channel.onbufferedamountlow = null; reject(new DOMException('Transfer cancelled', 'AbortError')); };
+            this.channel.onbufferedamountlow = onLow;
+            abort.signal.addEventListener('abort', onAbort, { once: true });
+          });
+        }
+        checkAbort();
+        const slice = await readAsArrayBuffer(file.slice(offset, offset + CHUNK_SIZE));
+        checkAbort();
+        this.channel.send(slice);
+        offset += CHUNK_SIZE;
+        this.onSendProgress?.(Math.min(offset / file.size, 1), file.name);
       }
-      const slice = await readAsArrayBuffer(file.slice(offset, offset + CHUNK_SIZE));
-      this.channel.send(slice);
-      offset += CHUNK_SIZE;
-      this.onSendProgress?.(Math.min(offset / file.size, 1), file.name);
-    }
 
-    this.channel.send(JSON.stringify({ type: 'file-end' }));
+      checkAbort();
+      this.channel.send(JSON.stringify({ type: 'file-end' }));
+    } finally {
+      if (this._sendAbort === abort) this._sendAbort = null;
+    }
   }
 
   async _detectConnectionType() {
@@ -196,6 +216,11 @@ class WebRTCManager {
   }
 
   destroy() {
+    this._sendAbort?.abort();
+    this._sendAbort  = null;
+    this._recvMeta   = null;
+    this._recvChunks = [];
+    this._recvSize   = 0;
     this.channel?.close();
     this.pc?.close();
     this.channel     = null;
