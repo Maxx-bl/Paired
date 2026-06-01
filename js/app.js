@@ -19,13 +19,13 @@ const cryptoMgr = new CryptoManager();
 const webrtcMgr = new WebRTCManager();
 
 webrtcMgr.onChannelOpen = () => {
-  const hint = document.getElementById('drop-hint-text');
-  if (!hint) return;
+  const btn = document.getElementById('file-btn');
+  if (!btn) return;
   const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-  hint.textContent = isTouch
+  btn.title = isTouch
     ? 'Connexion directe active — appuyer pour joindre un fichier'
     : 'Connexion directe active — glisser un fichier ici';
-  hint.classList.add('p2p-ready');
+  btn.classList.add('p2p-ready');
 };
 webrtcMgr.onFileReceived    = ({ blob, name, size }) => { hideProgress(); appendFileMessage({ blob, name, size, isOwn: false }); };
 webrtcMgr.onReceiveProgress = (pct, name) => showProgress(name, pct, false);
@@ -271,10 +271,7 @@ function setupPartnerLeftListener(roomId) {
       appendSystemMessage(`${state.partnerUsername} a quitté la conversation.`);
       document.getElementById('message-input').disabled = true;
       document.getElementById('send-btn').disabled = true;
-      const hint = document.getElementById('drop-hint');
-      hint.style.opacity       = '0.35';
-      hint.style.pointerEvents = 'none';
-      hint.style.textDecoration = 'none';
+      document.getElementById('file-btn').disabled = true;
       stopTimer();
     }
   });

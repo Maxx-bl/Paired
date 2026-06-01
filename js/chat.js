@@ -9,16 +9,10 @@ function initChatScreen(partnerUsername) {
   document.getElementById('send-btn').disabled        = false;
   document.getElementById('timer').classList.remove('timer-warning');
 
-  // Reset drop hint
-  const hint = document.getElementById('drop-hint');
-  const hintText = document.getElementById('drop-hint-text');
-  hint.style.opacity        = '';
-  hint.style.pointerEvents  = '';
-  hint.style.textDecoration = '';
-  hintText.classList.remove('p2p-ready');
-  hintText.textContent = isTouch
-    ? 'Appuyer pour joindre un fichier'
-    : 'Glisser un fichier ici ou cliquer';
+  // Reset file button
+  const fileBtn = document.getElementById('file-btn');
+  fileBtn.disabled = false;
+  fileBtn.title    = isTouch ? 'Appuyer pour joindre un fichier' : 'Joindre un fichier (ou glisser-déposer)';
 
   appendSystemMessage('Chiffré de bout en bout — messages et fichiers détruits à la déconnexion');
   setupDragAndDrop();
@@ -155,7 +149,7 @@ function setupDragAndDrop() {
   }
 
   // File picker — works on both desktop and mobile
-  document.getElementById('drop-hint').addEventListener('click', () => {
+  document.getElementById('file-btn').addEventListener('click', () => {
     if (state.partnerLeft) return;
     const picker    = document.createElement('input');
     picker.type     = 'file';
@@ -167,11 +161,11 @@ function setupDragAndDrop() {
   });
 }
 
-const MAX_FILE_SIZE = 5 * 1024 ** 3;
+const MAX_FILE_SIZE = 10 * 1024 ** 3;
 
 async function sendFile(file) {
   if (file.size > MAX_FILE_SIZE) {
-    appendSystemMessage(`« ${file.name} » dépasse la limite de 5 Go et n'a pas été envoyé.`);
+    appendSystemMessage(`« ${file.name} » dépasse la limite de 10 Go et n'a pas été envoyé.`);
     return;
   }
   if (!webrtcMgr.isReady()) {
