@@ -1,0 +1,7 @@
+name = "paired-turn"
+main = "index.js"
+compatibility_date = "2025-01-01"
+
+# Secrets (ne jamais mettre ici — utiliser : wrangler secret put TURN_KEY_ID)
+# TURN_KEY_ID       = l'ID de ta clé TURN dans Cloudflare Calls
+# TURN_KEY_API_TOKEN = le token API associé
