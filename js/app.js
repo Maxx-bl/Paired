@@ -14,6 +14,7 @@ const state = {
   role:               null,
   cryptoReady:        false,
   timerInterval:      null,
+  invitePoller:       null,  // fallback polling when WebSocket listener is unreliable (mobile)
   pendingRoomId:      null,
   pendingPartner:     null,
   pendingKeyRef:      null,  // Firebase ref listened for partner's key acceptance
@@ -72,9 +73,18 @@ async function registerUsername(username) {
   state.username = username;
 
   // value fires on connect, reconnect, and any change — more reliable than child_added on mobile
+  // No onDisconnect on the invite node: mobile browsers temporarily disconnect when backgrounded,
+  // which would prematurely wipe incoming invites before the user can see them.
   const invRef = db.ref(`invites/${username}`);
-  await invRef.onDisconnect().remove();
   invRef.on('value', syncInviteCards);
+
+  // Polling fallback: on some mobile browsers (Android Firefox) the persistent WebSocket
+  // listener is not reliably triggered. once() is a plain read and always works.
+  state.invitePoller = setInterval(async () => {
+    if (!state.username || state.roomId || state.leaving) return;
+    const snap = await db.ref(`invites/${state.username}`).once('value');
+    syncInviteCards(snap);
+  }, 2000);
 }
 
 // ── Unregister user (frees the username, cleans Firebase presence) ─────────────
@@ -82,10 +92,12 @@ async function unregisterUser() {
   const { username } = state;
   if (!username) return;
 
+  clearInterval(state.invitePoller);
+  state.invitePoller = null;
   state.username = null;
 
   db.ref(`invites/${username}`).off();
-  await db.ref(`invites/${username}`).onDisconnect().cancel();
+  await db.ref(`invites/${username}`).remove(); // explicit cleanup — not via onDisconnect
   await db.ref(`presence/${username}`).onDisconnect().cancel();
   await db.ref(`presence/${username}`).remove();
 }
@@ -231,6 +243,8 @@ async function rejectInvitation(from, roomId) {
 
 // ── Enter room ────────────────────────────────────────────────────────────────
 async function enterRoom(roomId, partnerUsername, role) {
+  clearInterval(state.invitePoller);
+  state.invitePoller    = null;
   state.roomId          = roomId;
   state.partnerUsername = partnerUsername;
   state.role            = role;

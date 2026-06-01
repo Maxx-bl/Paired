@@ -1,5 +1,18 @@
-const ADJECTIVES = ['Blue', 'Red', 'Dark', 'Swift', 'Calm', 'Wild', 'Frost', 'Storm', 'Quiet', 'Bold'];
-const NOUNS      = ['Wolf', 'Fox', 'Eagle', 'Tiger', 'Bear', 'Hawk', 'Lion', 'Shark', 'Raven', 'Lynx'];
+const ADJECTIVES = [
+  'Blue', 'Red', 'Dark', 'Swift', 'Calm', 'Wild', 'Frost', 'Storm', 'Quiet', 'Bold',
+  'Ash', 'Iron', 'Neon', 'Void', 'Dawn', 'Dusk', 'Grim', 'Keen', 'Lone', 'Bare',
+  'Jade', 'Onyx', 'Crisp', 'Blaze', 'Shade', 'Sleek', 'Stark', 'Thorn', 'Brisk', 'Gust',
+  'Cold', 'Sage', 'Rash', 'Ebon', 'Glow', 'Hazy', 'Icy', 'Murk', 'Pale', 'Raw',
+  'Sly', 'Tame', 'Wry', 'Dull', 'Fleet', 'Gruff', 'Hardy'
+];
+
+const NOUNS = [
+  'Wolf', 'Fox', 'Eagle', 'Tiger', 'Bear', 'Hawk', 'Lion', 'Shark', 'Raven', 'Lynx',
+  'Crow', 'Viper', 'Boar', 'Drake', 'Elk', 'Crane', 'Bison', 'Adder', 'Kite', 'Pike',
+  'Puma', 'Ibis', 'Stoat', 'Moose', 'Gecko', 'Finch', 'Heron', 'Mink',
+  'Orca', 'Newt', 'Asp', 'Tapir', 'Mole', 'Vole', 'Toad',
+  'Panda', 'Manta', 'Gator', 'Squid', 'Zebra', 'Bream', 'Koi'
+];
 
 let checkTimer = null;
 
@@ -135,6 +148,13 @@ function resetLoginScreens() {
   document.getElementById('connect-btn').disabled = false;
   clearInviteCards();
 }
+
+// Re-query invites when the tab becomes visible again (mobile backgrounding safety net)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.username && !state.roomId) {
+    db.ref(`invites/${state.username}`).once('value').then(syncInviteCards);
+  }
+});
 
 // ── Invitation sync (called by Firebase value listener) ───────────────────────
 
