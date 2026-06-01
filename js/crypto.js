@@ -2,6 +2,7 @@ class CryptoManager {
   constructor() {
     this.keyPair = null;
     this.sharedKey = null;
+    this._partnerPublicKeyB64 = null;
   }
 
   async generateKeyPair() {
@@ -15,6 +16,7 @@ class CryptoManager {
   }
 
   async deriveSharedKey(partnerPublicKeyB64) {
+    this._partnerPublicKeyB64 = partnerPublicKeyB64;
     const partnerKey = await crypto.subtle.importKey(
       'spki',
       this._fromB64(partnerPublicKeyB64),
@@ -47,6 +49,21 @@ class CryptoManager {
     const ct = buf.slice(12);
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, this.sharedKey, ct);
     return new TextDecoder().decode(plain);
+  }
+
+  async securityCode() {
+    if (!this._partnerPublicKeyB64 || !this.keyPair) return null;
+    const myKeyRaw = await crypto.subtle.exportKey('spki', this.keyPair.publicKey);
+    const myKeyB64 = this._toB64(new Uint8Array(myKeyRaw));
+    const [k1, k2] = [myKeyB64, this._partnerPublicKeyB64].sort();
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(k1 + k2));
+    const bytes = new Uint8Array(hash);
+    const groups = [];
+    for (let i = 0; i < 5; i++) {
+      const val = ((bytes[i * 2] << 8) | bytes[i * 2 + 1]) % 100000;
+      groups.push(String(val).padStart(5, '0'));
+    }
+    return groups;
   }
 
   _toB64(u8) {

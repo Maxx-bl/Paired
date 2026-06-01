@@ -65,6 +65,11 @@
         <div class="presence-dot"></div>
         <span id="chat-with" class="partner-name"></span>
         <span id="conn-type-badge" class="conn-badge" style="display:none"></span>
+        <button id="security-btn" class="btn-security" style="display:none" title="Vérifier le code de sécurité">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </button>
       </div>
       <div class="header-right">
         <span id="timer" class="timer">60:00</span>
@@ -101,6 +106,18 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Security code modal -->
+  <div id="security-modal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Code de sécurité</span>
+        <button id="security-modal-close" class="modal-close">✕</button>
+      </div>
+      <p class="modal-hint">Comparez ce code avec votre interlocuteur. S'il est identique des deux côtés, la conversation est protégée contre toute interception.</p>
+      <div id="security-code-display" class="security-code"></div>
+    </div>
   </div>
 
   <!-- Polyfill crypto.randomUUID pour Android Firefox < 95 -->
