@@ -8,18 +8,19 @@ function generateUUID() {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
-  username:        null,
-  partnerUsername: null,
-  roomId:          null,
-  role:            null,
-  cryptoReady:     false,
-  timerInterval:   null,
-  pendingRoomId:   null,
-  pendingPartner:  null,
-  pendingKeyRef:   null,  // Firebase ref listened for partner's key acceptance
-  leaving:         false, // true during endSession (blocks ghost notifications)
-  partnerLeft:     false,
-  joiningRoom:     false, // lock against concurrent room joins
+  username:           null,
+  partnerUsername:    null,
+  roomId:             null,
+  role:               null,
+  cryptoReady:        false,
+  timerInterval:      null,
+  pendingRoomId:      null,
+  pendingPartner:     null,
+  pendingKeyRef:      null,  // Firebase ref listened for partner's key acceptance
+  pendingDeclinedRef: null,  // Firebase ref listened for partner's decline
+  leaving:            false, // true during endSession (blocks ghost notifications)
+  partnerLeft:        false,
+  joiningRoom:        false, // lock against concurrent room joins
 };
 
 // ── Instances ─────────────────────────────────────────────────────────────────
@@ -70,10 +71,11 @@ async function registerUsername(username) {
 
   state.username = username;
 
-  // Listen for incoming invitations — fires immediately if one already exists
+  // Listen for incoming invitations — child_added fires for each existing + new invite
   const invRef = db.ref(`invites/${username}`);
   await invRef.onDisconnect().remove();
-  invRef.on('value', handleIncomingInvite);
+  invRef.on('child_added',   handleIncomingInvite);
+  invRef.on('child_removed', (snap) => removeInviteCard(snap.key));
 }
 
 // ── Unregister user (frees the username, cleans Firebase presence) ─────────────
@@ -91,21 +93,22 @@ async function unregisterUser() {
 
 // ── Cancel a pending connection request (waiting state) ───────────────────────
 async function cancelPendingConnection() {
-  const { pendingRoomId, pendingPartner, pendingKeyRef } = state;
+  const { pendingRoomId, pendingPartner, pendingKeyRef, pendingDeclinedRef } = state;
 
-  // Stop listening for partner's key
   pendingKeyRef?.off();
-  state.pendingKeyRef  = null;
-  state.pendingRoomId  = null;
-  state.pendingPartner = null;
+  pendingDeclinedRef?.off();
+  state.pendingKeyRef      = null;
+  state.pendingDeclinedRef = null;
+  state.pendingRoomId      = null;
+  state.pendingPartner     = null;
 
   if (pendingRoomId) {
     await db.ref(`rooms/${pendingRoomId}`).onDisconnect().cancel();
     await db.ref(`rooms/${pendingRoomId}`).remove();
   }
-  if (pendingPartner) {
-    await db.ref(`invites/${pendingPartner}`).onDisconnect().cancel();
-    await db.ref(`invites/${pendingPartner}`).remove();
+  if (pendingPartner && pendingRoomId) {
+    await db.ref(`invites/${pendingPartner}/${pendingRoomId}`).onDisconnect().cancel();
+    await db.ref(`invites/${pendingPartner}/${pendingRoomId}`).remove();
   }
 }
 
@@ -134,7 +137,7 @@ async function requestConnection(partnerUsername) {
   const myPublicKey = await cryptoMgr.generateKeyPair();
   await db.ref(`rooms/${roomId}/keys/${state.username}`).set(myPublicKey);
 
-  const invRef = db.ref(`invites/${partnerUsername}`);
+  const invRef = db.ref(`invites/${partnerUsername}/${roomId}`);
   await invRef.onDisconnect().remove();
   await invRef.set({ from: state.username, roomId, ts: firebase.database.ServerValue.TIMESTAMP });
 
@@ -144,11 +147,12 @@ async function requestConnection(partnerUsername) {
 
   partnerKeyRef.on('value', async (snap) => {
     if (!snap.exists()) return;
-    // Guard: user may have clicked back between the async write and this callback
     if (!state.pendingRoomId || state.joiningRoom || state.leaving) return;
 
     partnerKeyRef.off();
-    state.pendingKeyRef = null;
+    state.pendingDeclinedRef?.off();
+    state.pendingKeyRef      = null;
+    state.pendingDeclinedRef = null;
 
     state.joiningRoom = true;
     try {
@@ -159,20 +163,48 @@ async function requestConnection(partnerUsername) {
       state.joiningRoom = false;
     }
   });
+
+  // Listen for partner declining the invite
+  const declinedRef = db.ref(`rooms/${roomId}/declined`);
+  state.pendingDeclinedRef = declinedRef;
+
+  declinedRef.on('value', async (snap) => {
+    if (!snap.exists()) return;
+    if (!state.pendingRoomId || state.leaving) return;
+    declinedRef.off();
+    state.pendingDeclinedRef = null;
+    await cancelPendingConnection();
+    setStatus('connect-status', `${partnerUsername} a refusé la connexion`, 'error');
+    document.getElementById('connect-btn').disabled = false;
+  });
 }
 
 // ── Handle incoming invitation ────────────────────────────────────────────────
 async function handleIncomingInvite(snap) {
-  if (!snap.exists() || state.roomId || state.joiningRoom || state.leaving) return;
+  if (!snap.exists() || state.roomId || state.leaving) return;
   const { from, roomId } = snap.val();
   if (!from || !roomId) return;
 
-  // Mutual invitation: alphabetically smaller username becomes initiator
+  // Mutual invitation: both users clicked "Se connecter" on each other → auto-accept
   if (state.pendingRoomId && state.pendingPartner === from) {
     if (state.username < from) return; // we're initiator, ignore their invite
-    // We're receiver — cancel our outgoing invite
     await cancelPendingConnection();
+    await acceptInvitation(from, roomId);
+    return;
   }
+
+  // Show invitation card for the user to accept or decline
+  showInviteCard(from, roomId);
+}
+
+// ── Accept an invitation ──────────────────────────────────────────────────────
+async function acceptInvitation(from, roomId) {
+  if (state.roomId || state.joiningRoom || state.leaving) return;
+
+  clearInviteCards();
+
+  // Cancel any unrelated outgoing pending invite
+  if (state.pendingRoomId) await cancelPendingConnection();
 
   state.joiningRoom = true;
   try {
@@ -190,6 +222,13 @@ async function handleIncomingInvite(snap) {
   } finally {
     state.joiningRoom = false;
   }
+}
+
+// ── Decline an invitation ─────────────────────────────────────────────────────
+async function rejectInvitation(from, roomId) {
+  removeInviteCard(roomId);
+  await db.ref(`rooms/${roomId}/declined`).set(true);
+  await db.ref(`invites/${state.username}/${roomId}`).remove();
 }
 
 // ── Enter room ────────────────────────────────────────────────────────────────
@@ -305,14 +344,15 @@ async function endSession() {
 
   const { roomId } = state;
 
-  state.roomId          = null;
-  state.partnerUsername = null;
-  state.role            = null;
-  state.cryptoReady     = false;
-  state.pendingRoomId   = null;
-  state.pendingPartner  = null;
-  state.pendingKeyRef   = null;
-  state.partnerLeft     = false;
+  state.roomId             = null;
+  state.partnerUsername    = null;
+  state.role               = null;
+  state.cryptoReady        = false;
+  state.pendingRoomId      = null;
+  state.pendingPartner     = null;
+  state.pendingKeyRef      = null;
+  state.pendingDeclinedRef = null;
+  state.partnerLeft        = false;
 
   if (roomId) {
     await db.ref(`rooms/${roomId}`).onDisconnect().cancel();

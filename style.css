@@ -207,6 +207,66 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
 .separator::before { left: 0; }
 .separator::after  { right: 0; }
 
+/* ── Invitations ──────────────────────────────────────────────────────────── */
+.invitations-list {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.invite-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.invite-from {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.invite-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.btn-accept {
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-accept:hover:not(:disabled) { background: var(--accent-dk); }
+.btn-accept:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn-decline {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-decline:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+.btn-decline:disabled { opacity: 0.38; cursor: not-allowed; }
+
 /* ── Chat screen ──────────────────────────────────────────────────────────── */
 #screen-chat {
   flex-direction: column;

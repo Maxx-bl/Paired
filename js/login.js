@@ -133,4 +133,65 @@ function resetLoginScreens() {
   document.getElementById('partner-input').value = '';
   setStatus('connect-status', '', '');
   document.getElementById('connect-btn').disabled = false;
+  clearInviteCards();
+}
+
+// ── Invitation cards UI ───────────────────────────────────────────────────────
+
+function showInviteCard(from, roomId) {
+  const list = document.getElementById('invitations-list');
+
+  // Avoid duplicates
+  if (list.querySelector(`[data-room-id="${roomId}"]`)) return;
+
+  const card = document.createElement('div');
+  card.className = 'invite-card';
+  card.dataset.roomId = roomId;
+
+  const fromEl = document.createElement('span');
+  fromEl.className = 'invite-from';
+  fromEl.textContent = from;
+
+  const actions = document.createElement('div');
+  actions.className = 'invite-actions';
+
+  const acceptBtn = document.createElement('button');
+  acceptBtn.className = 'btn-accept';
+  acceptBtn.textContent = 'Accepter';
+
+  const declineBtn = document.createElement('button');
+  declineBtn.className = 'btn-decline';
+  declineBtn.textContent = 'Refuser';
+
+  acceptBtn.addEventListener('click', async () => {
+    acceptBtn.disabled = true;
+    declineBtn.disabled = true;
+    await acceptInvitation(from, roomId);
+  });
+
+  declineBtn.addEventListener('click', async () => {
+    acceptBtn.disabled = true;
+    declineBtn.disabled = true;
+    await rejectInvitation(from, roomId);
+  });
+
+  actions.appendChild(acceptBtn);
+  actions.appendChild(declineBtn);
+  card.appendChild(fromEl);
+  card.appendChild(actions);
+  list.appendChild(card);
+  list.style.display = 'flex';
+}
+
+function removeInviteCard(roomId) {
+  const list = document.getElementById('invitations-list');
+  const card = list.querySelector(`[data-room-id="${roomId}"]`);
+  if (card) card.remove();
+  if (list.childElementCount === 0) list.style.display = 'none';
+}
+
+function clearInviteCards() {
+  const list = document.getElementById('invitations-list');
+  list.innerHTML = '';
+  list.style.display = 'none';
 }
