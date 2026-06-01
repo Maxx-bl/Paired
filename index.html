@@ -38,10 +38,10 @@
           <strong id="my-username-display" class="my-name"></strong>
           <button id="copy-btn" class="btn-link">Copier</button>
         </div>
-        <p class="hint">Partagez ce pseudo avec votre interlocuteur</p>
+        <p class="hint">Partagez ce nom d'utilisateur</p>
       </div>
 
-      <div class="separator">Pseudo de votre correspondant</div>
+      <div class="separator">Connexion</div>
 
       <input id="partner-input" type="text" placeholder="Pseudo..." maxlength="20" autocomplete="off" spellcheck="false">
       <div id="connect-status" class="field-status"></div>
@@ -82,11 +82,13 @@
     </div>
 
     <div class="chat-footer">
-      <div id="drop-hint" class="drop-hint">
-        <span id="drop-hint-text">Glisser un fichier ici ou cliquer</span>
-      </div>
       <div class="input-row">
         <input id="message-input" type="text" placeholder="Message" autocomplete="off" spellcheck="false">
+        <button id="file-btn" class="btn-file" title="Joindre un fichier">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+          </svg>
+        </button>
         <button id="send-btn" class="btn-send">Envoyer</button>
       </div>
     </div>

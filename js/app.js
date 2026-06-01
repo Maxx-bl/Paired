@@ -1,15 +1,17 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
-  username:      null,
+  username:        null,
   partnerUsername: null,
-  roomId:        null,
-  role:          null,   // 'initiator' | 'receiver'
-  cryptoReady:   false,
-  timerInterval: null,
-  pendingRoomId: null,   // roomId we created while waiting for partner
-  pendingPartner: null,  // partner we sent an invite to
-  leaving:       false,  // true while endSession runs (prevents ghost notifications)
-  partnerLeft:   false,  // true once the partner disconnects
+  roomId:          null,
+  role:            null,
+  cryptoReady:     false,
+  timerInterval:   null,
+  pendingRoomId:   null,
+  pendingPartner:  null,
+  pendingKeyRef:   null,  // Firebase ref listened for partner's key acceptance
+  leaving:         false, // true during endSession (blocks ghost notifications)
+  partnerLeft:     false,
+  joiningRoom:     false, // lock against concurrent room joins
 };
 
 // ── Instances ─────────────────────────────────────────────────────────────────
@@ -18,26 +20,32 @@ const webrtcMgr = new WebRTCManager();
 
 webrtcMgr.onChannelOpen = () => {
   const hint = document.getElementById('drop-hint-text');
-  hint.textContent = 'Connexion directe active — glisser un fichier ici';
+  if (!hint) return;
+  const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  hint.textContent = isTouch
+    ? 'Connexion directe active — appuyer pour joindre un fichier'
+    : 'Connexion directe active — glisser un fichier ici';
   hint.classList.add('p2p-ready');
 };
-webrtcMgr.onFileReceived = ({ blob, name, size }) => {
-  hideProgress();
-  appendFileMessage({ blob, name, size, isOwn: false });
-};
+webrtcMgr.onFileReceived    = ({ blob, name, size }) => { hideProgress(); appendFileMessage({ blob, name, size, isOwn: false }); };
 webrtcMgr.onReceiveProgress = (pct, name) => showProgress(name, pct, false);
-webrtcMgr.onSendProgress    = (pct, name) => {
-  showProgress(name, pct, true);
-  if (pct >= 1) setTimeout(hideProgress, 800);
-};
+webrtcMgr.onSendProgress    = (pct, name) => { showProgress(name, pct, true); if (pct >= 1) setTimeout(hideProgress, 800); };
 
-// ── Screen management ─────────────────────────────────────────────────────────
+// ── UUID (crypto.randomUUID absent sur certains navigateurs mobiles) ──────────
+function generateUUID() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
   document.getElementById(`screen-${name}`).classList.add('active');
 }
 
-// ── Username availability (direct Firebase read) ──────────────────────────────
+// ── Username check ────────────────────────────────────────────────────────────
 async function checkUsernameAvailable(username) {
   const snap = await db.ref(`presence/${username}`).once('value');
   return !snap.exists();
@@ -54,91 +62,140 @@ async function registerUsername(username) {
 
   state.username = username;
 
-  // Listen for incoming invitations (fires immediately if one already exists)
+  // Listen for incoming invitations — fires immediately if one already exists
   const invRef = db.ref(`invites/${username}`);
   await invRef.onDisconnect().remove();
   invRef.on('value', handleIncomingInvite);
 }
 
+// ── Unregister user (frees the username, cleans Firebase presence) ─────────────
+async function unregisterUser() {
+  const { username } = state;
+  if (!username) return;
+
+  state.username = null;
+
+  db.ref(`invites/${username}`).off();
+  await db.ref(`invites/${username}`).onDisconnect().cancel();
+  await db.ref(`presence/${username}`).onDisconnect().cancel();
+  await db.ref(`presence/${username}`).remove();
+}
+
+// ── Cancel a pending connection request (waiting state) ───────────────────────
+async function cancelPendingConnection() {
+  const { pendingRoomId, pendingPartner, pendingKeyRef } = state;
+
+  // Stop listening for partner's key
+  pendingKeyRef?.off();
+  state.pendingKeyRef  = null;
+  state.pendingRoomId  = null;
+  state.pendingPartner = null;
+
+  if (pendingRoomId) {
+    await db.ref(`rooms/${pendingRoomId}`).onDisconnect().cancel();
+    await db.ref(`rooms/${pendingRoomId}`).remove();
+  }
+  if (pendingPartner) {
+    await db.ref(`invites/${pendingPartner}`).onDisconnect().cancel();
+    await db.ref(`invites/${pendingPartner}`).remove();
+  }
+}
+
+// ── Go back from connect screen (with or without a pending invite) ────────────
+async function goBack() {
+  if (state.leaving) return;
+  state.leaving = true;
+
+  await cancelPendingConnection();
+  await unregisterUser();
+
+  state.leaving = false;
+
+  showScreen('login');
+  resetLoginScreens();
+}
+
 // ── Request connection to partner ─────────────────────────────────────────────
 async function requestConnection(partnerUsername) {
-  const roomId = crypto.randomUUID();
+  const roomId = generateUUID();
   state.pendingRoomId  = roomId;
   state.pendingPartner = partnerUsername;
 
-  // Register room cleanup on disconnect (even while partial)
   await db.ref(`rooms/${roomId}`).onDisconnect().remove();
 
-  // Write our public key to the room
   const myPublicKey = await cryptoMgr.generateKeyPair();
   await db.ref(`rooms/${roomId}/keys/${state.username}`).set(myPublicKey);
 
-  // Write invitation
   const invRef = db.ref(`invites/${partnerUsername}`);
   await invRef.onDisconnect().remove();
-  await invRef.set({
-    from:      state.username,
-    roomId,
-    ts: firebase.database.ServerValue.TIMESTAMP,
-  });
+  await invRef.set({ from: state.username, roomId, ts: firebase.database.ServerValue.TIMESTAMP });
 
-  // Wait for partner to accept (they write their public key)
-  db.ref(`rooms/${roomId}/keys/${partnerUsername}`).on('value', async (snap) => {
+  // Listen for partner's key — their acceptance signal
+  const partnerKeyRef = db.ref(`rooms/${roomId}/keys/${partnerUsername}`);
+  state.pendingKeyRef = partnerKeyRef;
+
+  partnerKeyRef.on('value', async (snap) => {
     if (!snap.exists()) return;
-    db.ref(`rooms/${roomId}/keys/${partnerUsername}`).off();
+    // Guard: user may have clicked back between the async write and this callback
+    if (!state.pendingRoomId || state.joiningRoom || state.leaving) return;
 
-    await cryptoMgr.deriveSharedKey(snap.val());
-    state.cryptoReady = true;
-    await enterRoom(roomId, partnerUsername, 'initiator');
+    partnerKeyRef.off();
+    state.pendingKeyRef = null;
+
+    state.joiningRoom = true;
+    try {
+      await cryptoMgr.deriveSharedKey(snap.val());
+      state.cryptoReady = true;
+      await enterRoom(roomId, partnerUsername, 'initiator');
+    } finally {
+      state.joiningRoom = false;
+    }
   });
 }
 
 // ── Handle incoming invitation ────────────────────────────────────────────────
 async function handleIncomingInvite(snap) {
-  if (!snap.exists() || state.roomId) return;
+  if (!snap.exists() || state.roomId || state.joiningRoom || state.leaving) return;
   const { from, roomId } = snap.val();
   if (!from || !roomId) return;
 
-  // Mutual invitation: both users entered each other's username simultaneously.
-  // Alphabetically smaller username becomes initiator (uses their own room).
+  // Mutual invitation: alphabetically smaller username becomes initiator
   if (state.pendingRoomId && state.pendingPartner === from) {
-    if (state.username < from) return; // we're the initiator, ignore their invite
-    // We're the receiver. Cancel our outgoing invite.
-    await db.ref(`invites/${from}`).remove();
-    state.pendingRoomId  = null;
-    state.pendingPartner = null;
+    if (state.username < from) return; // we're initiator, ignore their invite
+    // We're receiver — cancel our outgoing invite
+    await cancelPendingConnection();
   }
 
-  // Read initiator's public key (written before the invite)
-  const initiatorKeySnap = await db.ref(`rooms/${roomId}/keys/${from}`).once('value');
-  if (!initiatorKeySnap.exists()) return;
+  state.joiningRoom = true;
+  try {
+    const initiatorKeySnap = await db.ref(`rooms/${roomId}/keys/${from}`).once('value');
+    if (!initiatorKeySnap.exists() || state.leaving) return;
 
-  // Generate our key pair and derive shared secret
-  const myPublicKey = await cryptoMgr.generateKeyPair();
-  await cryptoMgr.deriveSharedKey(initiatorKeySnap.val());
-  state.cryptoReady = true;
+    const myPublicKey = await cryptoMgr.generateKeyPair();
+    await cryptoMgr.deriveSharedKey(initiatorKeySnap.val());
+    state.cryptoReady = true;
 
-  // Write our key (this signals acceptance to the initiator)
-  await db.ref(`rooms/${roomId}/keys/${state.username}`).set(myPublicKey);
+    await db.ref(`rooms/${roomId}/keys/${state.username}`).set(myPublicKey);
+    await db.ref(`invites/${state.username}`).remove();
 
-  // Clean up the invite we just processed
-  await db.ref(`invites/${state.username}`).remove();
-
-  await enterRoom(roomId, from, 'receiver');
+    await enterRoom(roomId, from, 'receiver');
+  } finally {
+    state.joiningRoom = false;
+  }
 }
 
 // ── Enter room ────────────────────────────────────────────────────────────────
 async function enterRoom(roomId, partnerUsername, role) {
-  state.roomId         = roomId;
+  state.roomId          = roomId;
   state.partnerUsername = partnerUsername;
-  state.role           = role;
-  state.pendingRoomId  = null;
-  state.pendingPartner = null;
+  state.role            = role;
+  state.pendingRoomId   = null;
+  state.pendingPartner  = null;
+  state.pendingKeyRef   = null;
+  state.partnerLeft     = false;
 
-  // Both users register room deletion on disconnect (first to disconnect cleans up)
   await db.ref(`rooms/${roomId}`).onDisconnect().remove();
 
-  // Initiator writes the room metadata
   if (role === 'initiator') {
     await db.ref(`rooms/${roomId}/meta`).set({
       user1: state.username,
@@ -155,9 +212,7 @@ async function enterRoom(roomId, partnerUsername, role) {
   initChatScreen(partnerUsername);
   startTimer(3600);
 
-  if (role === 'initiator') {
-    await webrtcMgr.createOffer();
-  }
+  if (role === 'initiator') await webrtcMgr.createOffer();
 }
 
 // ── WebRTC signaling via Firebase ─────────────────────────────────────────────
@@ -170,7 +225,6 @@ function setupWebRTCSignaling(roomId, role) {
   webrtcMgr.sendAnswer = (sdp) => db.ref(`rooms/${roomId}/webrtc/answer`).set({ sdp: sdp.sdp, type: sdp.type });
   webrtcMgr.sendIce    = (c)   => db.ref(myIcePath).push(c.toJSON ? c.toJSON() : c);
 
-  // Receive peer ICE candidates
   db.ref(peerIcePath).on('child_added', (snap) => {
     webrtcMgr.addIceCandidate(new RTCIceCandidate(snap.val()));
   });
@@ -198,11 +252,11 @@ function setupWebRTCSignaling(roomId, role) {
 function setupMessageListener(roomId) {
   db.ref(`rooms/${roomId}/messages`).on('child_added', async (snap) => {
     const { sender, ciphertext, timestamp } = snap.val();
-    if (sender === state.username) return; // already shown locally
+    if (sender === state.username) return;
     try {
       const text = await cryptoMgr.decrypt(ciphertext);
       appendMessage({ text, sender, timestamp, isOwn: false });
-    } catch { /* undecryptable = skip */ }
+    } catch { /* skip undecryptable */ }
   });
 }
 
@@ -218,7 +272,7 @@ function setupPartnerLeftListener(roomId) {
       document.getElementById('message-input').disabled = true;
       document.getElementById('send-btn').disabled = true;
       const hint = document.getElementById('drop-hint');
-      hint.style.opacity = '0.35';
+      hint.style.opacity       = '0.35';
       hint.style.pointerEvents = 'none';
       hint.style.textDecoration = 'none';
       stopTimer();
@@ -231,48 +285,38 @@ async function sendEncryptedMessage(text) {
   if (!state.roomId || !state.cryptoReady) return;
   const ciphertext = await cryptoMgr.encrypt(text);
   await db.ref(`rooms/${state.roomId}/messages`).push({
-    sender:     state.username,
+    sender:    state.username,
     ciphertext,
-    timestamp:  firebase.database.ServerValue.TIMESTAMP,
+    timestamp: firebase.database.ServerValue.TIMESTAMP,
   });
 }
 
-// ── End session ───────────────────────────────────────────────────────────────
+// ── End session (leave chat room) ─────────────────────────────────────────────
 async function endSession() {
+  if (state.leaving) return;
   state.leaving = true;
   stopTimer();
   webrtcMgr.destroy();
 
-  const { roomId, username, pendingPartner } = state;
+  const { roomId } = state;
 
-  // Reset state immediately to block re-entrant calls
-  state.roomId         = null;
+  state.roomId          = null;
   state.partnerUsername = null;
-  state.role           = null;
-  state.cryptoReady    = false;
-  state.pendingRoomId  = null;
-  state.pendingPartner = null;
-  state.partnerLeft    = false;
+  state.role            = null;
+  state.cryptoReady     = false;
+  state.pendingRoomId   = null;
+  state.pendingPartner  = null;
+  state.pendingKeyRef   = null;
+  state.partnerLeft     = false;
 
   if (roomId) {
     await db.ref(`rooms/${roomId}`).onDisconnect().cancel();
     await db.ref(`rooms/${roomId}`).remove();
   }
 
-  if (pendingPartner) {
-    await db.ref(`invites/${pendingPartner}`).onDisconnect().cancel();
-    await db.ref(`invites/${pendingPartner}`).remove();
-  }
+  await unregisterUser();
 
-  if (username) {
-    db.ref(`invites/${username}`).off();
-    await db.ref(`invites/${username}`).onDisconnect().cancel();
-    await db.ref(`presence/${username}`).onDisconnect().cancel();
-    await db.ref(`presence/${username}`).remove();
-  }
-
-  state.username = null;
-  state.leaving  = false;
+  state.leaving = false;
 
   showScreen('login');
   resetLoginScreens();
@@ -297,10 +341,9 @@ function stopTimer() {
   state.timerInterval = null;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function setStatus(id, text, type) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.textContent  = text;
-  el.className    = `field-status ${type}`;
+  el.textContent = text;
+  el.className   = `field-status ${type}`;
 }

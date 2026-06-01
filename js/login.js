@@ -48,7 +48,7 @@ document.getElementById('next-btn').addEventListener('click', async () => {
 });
 
 async function triggerCheck(val) {
-  if (!/^[a-zA-Z0-9_]{3,20}$/.test(val)) {
+  if (!/^[a-z0-9_]{3,20}$/.test(val)) {
     setStatus('username-status', 'Lettres, chiffres et _ uniquement', 'error');
     document.getElementById('next-btn').disabled = true;
     return;
@@ -57,23 +57,45 @@ async function triggerCheck(val) {
   const available = await checkUsernameAvailable(val);
   if (document.getElementById('username-input').value.trim() !== val) return; // stale
   if (available) {
-    setStatus('username-status', '✓ Disponible', 'ok');
+    setStatus('username-status', 'Disponible', 'ok');
     document.getElementById('next-btn').disabled = false;
   } else {
-    setStatus('username-status', '✗ Déjà utilisé', 'error');
+    setStatus('username-status', 'Déjà utilisé', 'error');
     document.getElementById('next-btn').disabled = true;
   }
 }
 
 // ── Screen: Connect ───────────────────────────────────────────────────────────
 
-document.getElementById('back-btn').addEventListener('click', () => showScreen('login'));
+// Back button: properly cancels any pending state and frees the username
+document.getElementById('back-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('back-btn');
+  btn.disabled = true;
+  await goBack(); // defined in app.js
+  btn.disabled = false;
+});
 
 document.getElementById('copy-btn').addEventListener('click', () => {
-  navigator.clipboard.writeText(document.getElementById('my-username-display').textContent).then(() => {
-    document.getElementById('copy-btn').textContent = '✓';
-    setTimeout(() => (document.getElementById('copy-btn').textContent = '⎘'), 1500);
-  });
+  const text = document.getElementById('my-username-display').textContent;
+  const btn  = document.getElementById('copy-btn');
+  const confirm = () => {
+    btn.textContent = 'Copié';
+    setTimeout(() => (btn.textContent = 'Copier'), 1500);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(confirm).catch(confirm);
+  } else {
+    // Fallback pour navigateurs sans clipboard API
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.position = 'fixed';
+    el.style.opacity  = '0';
+    document.body.appendChild(el);
+    el.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(el);
+    confirm();
+  }
 });
 
 document.getElementById('partner-input').addEventListener('input', (e) => {

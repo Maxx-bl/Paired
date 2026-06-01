@@ -1,7 +1,20 @@
+// Blob.arrayBuffer() absent sur iOS < 14 — fallback FileReader
+function readAsArrayBuffer(blob) {
+  if (blob.arrayBuffer) return blob.arrayBuffer();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'turn:openrelay.metered.ca:80',                username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:80?transport=tcp',  username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443',              username: 'openrelayproject', credential: 'openrelayproject' },
 ];
 
 const CHUNK_SIZE = 64 * 1024;
@@ -109,7 +122,7 @@ class WebRTCManager {
       while (this.channel.bufferedAmount > BUFFER_THRESHOLD) {
         await new Promise((r) => setTimeout(r, 50));
       }
-      const slice = await file.slice(offset, offset + CHUNK_SIZE).arrayBuffer();
+      const slice = await readAsArrayBuffer(file.slice(offset, offset + CHUNK_SIZE));
       this.channel.send(slice);
       offset += CHUNK_SIZE;
       this.onSendProgress?.(Math.min(offset / file.size, 1), file.name);
