@@ -46,6 +46,35 @@ webrtcMgr.onConnectionType  = (type) => {
   badge.className   = `conn-badge ${type.toLowerCase()}`;
   badge.style.display = '';
 };
+const CONN_INFO = {
+  P2P: {
+    title: 'Connexion P2P directe (Peer-to-peer)',
+    text:  'Vos données transitent directement entre vous et votre interlocuteur, sans passer par aucun serveur intermédiaire. Les messages sont chiffrés de bout en bout (ECDH + AES-GCM). Les fichiers sont protégés par le chiffrement WebRTC (DTLS), intégré au protocole.',
+  },
+  TURN: {
+    title: 'Connexion via relais (TURN)',
+    text:  'La connexion directe P2P n\'a pas pu s\'établir, probablement à cause d\'un pare-feu ou d\'une configuration réseau restrictive. Vos données transitent par un serveur relais : les messages restent chiffrés de bout en bout, et les fichiers sont protégés par le chiffrement DTLS de WebRTC.',
+  },
+};
+
+document.getElementById('conn-type-badge').addEventListener('click', () => {
+  const badge = document.getElementById('conn-type-badge');
+  const type  = badge.textContent.trim();
+  const info  = CONN_INFO[type];
+  if (!info) return;
+  document.getElementById('conn-info-title').textContent = info.title;
+  document.getElementById('conn-info-text').textContent  = info.text;
+  document.getElementById('conn-info-modal').style.display = 'flex';
+});
+
+document.getElementById('conn-info-close').addEventListener('click', () => {
+  document.getElementById('conn-info-modal').style.display = 'none';
+});
+
+document.getElementById('conn-info-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+});
+
 webrtcMgr.onFileReceived    = ({ blob, name, size }) => { hideProgress(); appendFileMessage({ blob, name, size, isOwn: false }); };
 webrtcMgr.onReceiveProgress = (pct, name) => showProgress(name, pct, false);
 webrtcMgr.onSendProgress    = (pct, name) => { showProgress(name, pct, true); if (pct >= 1) setTimeout(hideProgress, 800); };
