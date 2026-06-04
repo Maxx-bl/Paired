@@ -339,6 +339,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   text-transform: uppercase;
   padding: 2px 7px;
   border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
 }
 .conn-badge.p2p  { background: color-mix(in srgb, var(--ok)   15%, var(--surface2)); color: var(--ok); }
 .conn-badge.turn { background: color-mix(in srgb, var(--warn)  15%, var(--surface2)); color: var(--warn); }

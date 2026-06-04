@@ -120,6 +120,17 @@
     </div>
   </div>
 
+  <!-- Connection type info modal -->
+  <div id="conn-info-modal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span id="conn-info-title" class="modal-title"></span>
+        <button id="conn-info-close" class="modal-close">✕</button>
+      </div>
+      <p id="conn-info-text" class="modal-hint"></p>
+    </div>
+  </div>
+
   <!-- Polyfill crypto.randomUUID pour Android Firefox < 95 -->
   <script>
     if (typeof crypto !== 'undefined' && !crypto.randomUUID) {
