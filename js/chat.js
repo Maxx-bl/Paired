@@ -5,8 +5,8 @@ const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
 function initChatScreen(partnerUsername) {
   document.getElementById('chat-with').textContent   = partnerUsername;
   document.getElementById('messages').innerHTML       = '';
-  document.getElementById('message-input').disabled  = false;
-  document.getElementById('send-btn').disabled        = false;
+  document.getElementById('message-input').disabled  = true;
+  document.getElementById('send-btn').disabled        = true;
   document.getElementById('timer').classList.remove('timer-warning');
 
   // Reset file button
@@ -119,6 +119,10 @@ async function sendMessage() {
   const input = document.getElementById('message-input');
   const text  = input.value.trim();
   if (!text || !state.roomId || !state.cryptoReady) return;
+  if (!webrtcMgr.isReady()) {
+    appendSystemMessage('La connexion P2P n\'est pas encore prête. Patientez quelques secondes et réessayez.');
+    return;
+  }
 
   appendMessage({ text, sender: state.username, timestamp: Date.now(), isOwn: true });
   input.value = '';

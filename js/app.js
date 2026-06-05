@@ -31,6 +31,9 @@ const cryptoMgr = new CryptoManager();
 const webrtcMgr = new WebRTCManager();
 
 webrtcMgr.onChannelOpen = () => {
+  document.getElementById('message-input').disabled = false;
+  document.getElementById('send-btn').disabled      = false;
+
   const btn = document.getElementById('file-btn');
   if (!btn) return;
   const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -38,6 +41,14 @@ webrtcMgr.onChannelOpen = () => {
     ? 'Connexion directe active — appuyer pour joindre un fichier'
     : 'Connexion directe active — glisser un fichier ici';
   btn.classList.add('p2p-ready');
+};
+
+webrtcMgr.onMessageReceived = async ({ ciphertext, timestamp }) => {
+  if (!state.cryptoReady) return;
+  try {
+    const text = await cryptoMgr.decrypt(ciphertext);
+    appendMessage({ text, sender: state.partnerUsername, timestamp, isOwn: false });
+  } catch { /* message indéchiffrable ignoré */ }
 };
 webrtcMgr.onConnectionType  = (type) => {
   const badge = document.getElementById('conn-type-badge');
@@ -310,7 +321,6 @@ async function enterRoom(roomId, partnerUsername, role, sessionDuration = 60) {
   await webrtcMgr.loadIceServers();
 
   setupWebRTCSignaling(roomId, role);
-  setupMessageListener(roomId);
   setupPartnerLeftListener(roomId);
 
   showScreen('chat');
@@ -354,18 +364,6 @@ function setupWebRTCSignaling(roomId, role) {
   }
 }
 
-// ── Message listener ──────────────────────────────────────────────────────────
-function setupMessageListener(roomId) {
-  db.ref(`rooms/${roomId}/messages`).on('child_added', async (snap) => {
-    const { sender, ciphertext, timestamp } = snap.val();
-    if (sender === state.username) return;
-    try {
-      const text = await cryptoMgr.decrypt(ciphertext);
-      appendMessage({ text, sender, timestamp, isOwn: false });
-    } catch { /* skip undecryptable */ }
-  });
-}
-
 // ── Partner-left detection ────────────────────────────────────────────────────
 function setupPartnerLeftListener(roomId) {
   let metaWasSet = false;
@@ -382,15 +380,11 @@ function setupPartnerLeftListener(roomId) {
   });
 }
 
-// ── Send encrypted message ────────────────────────────────────────────────────
+// ── Send encrypted message via P2P data channel ───────────────────────────────
 async function sendEncryptedMessage(text) {
   if (!state.roomId || !state.cryptoReady) return;
   const ciphertext = await cryptoMgr.encrypt(text);
-  await db.ref(`rooms/${state.roomId}/messages`).push({
-    sender:    state.username,
-    ciphertext,
-    timestamp: firebase.database.ServerValue.TIMESTAMP,
-  });
+  webrtcMgr.sendMessage(ciphertext);
 }
 
 // ── End session (leave chat room) ─────────────────────────────────────────────
