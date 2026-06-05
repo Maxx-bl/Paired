@@ -42,6 +42,7 @@ class WebRTCManager {
 
     // UI callbacks
     this.onFileReceived    = null;
+    this.onMessageReceived = null;
     this.onSendProgress    = null;
     this.onReceiveProgress = null;
     this.onChannelOpen     = null;
@@ -129,7 +130,9 @@ class WebRTCManager {
     ch.onmessage = (e) => {
       if (typeof e.data === 'string') {
         const msg = JSON.parse(e.data);
-        if (msg.type === 'file-start') {
+        if (msg.type === 'message') {
+          this.onMessageReceived?.(msg);
+        } else if (msg.type === 'file-start') {
           this._recvMeta   = msg;
           this._recvChunks = [];
           this._recvSize   = 0;
@@ -146,6 +149,11 @@ class WebRTCManager {
         }
       }
     };
+  }
+
+  sendMessage(ciphertext) {
+    if (!this.isReady()) throw new Error('Canal P2P non disponible');
+    this.channel.send(JSON.stringify({ type: 'message', ciphertext, timestamp: Date.now() }));
   }
 
   async sendFile(file) {

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Max\\\\Documents\\\\Projects\\\\Web\\\\Paired\" -Recurse -Include \"*.html\", \"*.css\")",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Max\\\\Documents\\\\Projects\\\\Web\\\\Paired\" -Directory)"
     ]
   }
 }
