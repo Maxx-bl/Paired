@@ -5,107 +5,166 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Paired</title>
   <link rel="stylesheet" href="style.css">
+  <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');</script>
 </head>
 <body>
 
   <!-- ── Screen 1: Choose username ─────────────────────────────────────────── -->
   <div id="screen-login" class="screen active">
     <div class="card">
-      <div class="brand">
+      <div class="card-header">
         <span class="brand-name">Paired</span>
+        <div class="card-actions">
+          <button class="btn-icon btn-info" aria-label="À propos">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          </button>
+          <button class="btn-icon btn-theme" aria-label="Thème">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
       </div>
-      <p class="tagline">Conversation P2P chiffrée, anonyme et éphémère.</p>
-      <p class="size-badge">Jusqu'à 10 Go par fichier, téléchargement peer-to-peer.</p>
 
-      <div class="label-row">
-        <label class="input-label" for="username-input">Pseudo</label>
-        <button id="generate-btn" class="btn-link">Générer</button>
+      <div class="tagline-block">
+        <p class="tagline">Messagerie et transfert de fichiers<br>en P2P, anonyme et éphémère.</p>
+        <p class="size-badge">10 Go max par fichier.<br>Téléchargement peer-to-peer.</p>
       </div>
-      <input id="username-input" type="text" placeholder="ex: legendaryeagle67" maxlength="20" autocomplete="off" spellcheck="false">
-      <div id="username-status" class="field-status"></div>
 
-      <button id="next-btn" class="btn-primary" disabled>Continuer</button>
+      <div class="pseudo-section">
+        <div class="pseudo-label-row">
+          <label class="pseudo-label" for="username-input">Pseudo</label>
+          <span class="pseudo-hint">(unique à cette session)</span>
+        </div>
+        <div class="input-with-btn">
+          <input id="username-input" type="text" placeholder="votre pseudo" maxlength="20" autocomplete="off" spellcheck="false">
+          <button id="generate-btn" class="btn-generate">Générer</button>
+        </div>
+        <div id="username-status" class="field-status"></div>
+      </div>
+
+      <button id="next-btn" class="btn-primary" disabled>Confirmer</button>
     </div>
   </div>
 
   <!-- ── Screen 2: Connect to partner ──────────────────────────────────────── -->
   <div id="screen-connect" class="screen">
     <div class="card">
-      <button id="back-btn" class="btn-back">Retour</button>
 
-      <div class="my-name-box">
-        <span class="input-label">Votre pseudo</span>
-        <div class="name-row">
-          <strong id="my-username-display" class="my-name"></strong>
-          <button id="copy-btn" class="btn-link">Copier</button>
+      <div class="connect-nav">
+        <button id="back-btn" class="btn-icon" aria-label="Accueil">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3L2 12h3v9h5v-5h4v5h5v-9h3L12 3z"/></svg>
+        </button>
+        <button class="btn-icon btn-info" aria-label="À propos">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        </button>
+        <button class="btn-icon btn-theme" aria-label="Thème">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+
+      <div class="connect-block">
+        <p class="connect-label">Votre pseudo :</p>
+        <div class="input-with-btn">
+          <strong id="my-username-display" class="name-display-input"></strong>
+          <button id="copy-btn" class="btn-generate">Copier</button>
         </div>
-        <p class="hint">Partagez ce nom d'utilisateur</p>
       </div>
 
-      <div class="separator">Connexion</div>
-
-      <div class="connect-inputs">
-        <input id="partner-input" type="text" placeholder="Pseudo..." maxlength="20" autocomplete="off" spellcheck="false">
-        <input id="duration-input" type="number" min="1" max="60" placeholder="60" class="duration-input" title="Durée de session en minutes">
-        <span class="duration-unit">min</span>
+      <div class="connect-block">
+        <p class="connect-section-title">Envoyez une invitation</p>
+        <p class="connect-section-hint">Inscrivez le pseudo de votre correspondant pour lui envoyer une invitation de session.</p>
+        <div class="connect-inputs">
+          <input id="partner-input" type="text" placeholder="pseudo correspondant" maxlength="20" autocomplete="off" spellcheck="false">
+          <button id="duration-toggle" class="btn-icon" aria-label="Durée de session">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </button>
+          <input id="duration-input" type="number" min="1" max="60" placeholder="60" class="duration-input" style="display:none">
+          <span class="duration-unit" id="duration-unit-label" style="display:none">min</span>
+        </div>
+        <div id="connect-status" class="field-status"></div>
+        <button id="connect-btn" class="btn-primary" disabled>Envoyer</button>
       </div>
-      <div id="connect-status" class="field-status"></div>
 
+      <p id="invitations-header" class="invitations-header" style="display:none"></p>
       <div id="invitations-list" class="invitations-list"></div>
+      <p id="waiting-hint" class="connect-waiting">En attente d'invitation...</p>
 
-      <button id="connect-btn" class="btn-primary">Se connecter</button>
     </div>
   </div>
 
   <!-- ── Screen 3: Chat ────────────────────────────────────────────────────── -->
   <div id="screen-chat" class="screen">
+    <div class="chat-card">
 
-    <div class="chat-header">
-      <div class="header-left">
-        <div class="presence-dot"></div>
-        <span id="chat-with" class="partner-name"></span>
-        <span id="conn-type-badge" class="conn-badge" style="display:none"></span>
-        <button id="security-btn" class="btn-security" style="display:none" title="Vérifier le code de sécurité">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          </svg>
-        </button>
+      <div class="chat-header">
+        <div class="header-left">
+          <div class="chat-avatar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+            <div class="presence-dot"></div>
+          </div>
+          <span id="chat-with" class="partner-name"></span>
+          <span id="conn-type-badge" class="conn-badge" style="display:none"></span>
+          <button id="security-btn" class="btn-security" style="display:none" title="Vérifier le code de sécurité">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="header-center">
+          <button class="btn-icon btn-theme" aria-label="Mode sombre">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+        <div class="header-right">
+          <span id="timer" class="timer">60:00</span>
+          <button id="leave-btn" class="btn-leave">Quitter</button>
+        </div>
       </div>
-      <div class="header-right">
-        <span id="timer" class="timer">60:00</span>
-        <button id="leave-btn" class="btn-leave">Quitter</button>
+
+      <div id="messages" class="messages"></div>
+
+      <div id="drop-overlay" class="drop-overlay">
+        <span class="drop-label">Déposer ici</span>
       </div>
+
+      <div id="progress-container" class="progress-wrap" style="display:none">
+        <div class="progress-meta">
+          <span id="progress-direction" class="progress-dir">Envoi</span>
+          <span id="progress-filename" class="progress-name"></span>
+          <span id="progress-pct" class="progress-pct">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div id="file-progress" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="chat-footer">
+        <div class="input-row">
+          <button id="file-btn" class="btn-file" title="Joindre un fichier">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+          </button>
+          <input id="message-input" type="text" placeholder="message" autocomplete="off" spellcheck="false">
+          <button id="send-btn" class="btn-send">Envoyer</button>
+        </div>
+      </div>
+
     </div>
+  </div>
 
-    <div id="messages" class="messages"></div>
-
-    <div id="drop-overlay" class="drop-overlay">
-      <span class="drop-label">Déposer ici</span>
-    </div>
-
-    <div id="progress-container" class="progress-wrap" style="display:none">
-      <div class="progress-meta">
-        <span id="progress-direction" class="progress-dir">Envoi</span>
-        <span id="progress-filename" class="progress-name"></span>
-        <span id="progress-pct" class="progress-pct">0%</span>
+  <!-- Info modal -->
+  <div id="info-modal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">À propos</span>
+        <button id="info-modal-close" class="modal-close">✕</button>
       </div>
-      <div class="progress-bar">
-        <div id="file-progress" class="progress-fill"></div>
-      </div>
+      <p class="modal-hint" style="white-space: pre-line">Développeur : Synae
+Graphiste : Timo</p>
     </div>
-
-    <div class="chat-footer">
-      <div class="input-row">
-        <input id="message-input" type="text" placeholder="Message" autocomplete="off" spellcheck="false">
-        <button id="file-btn" class="btn-file" title="Joindre un fichier">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
-          </svg>
-        </button>
-        <button id="send-btn" class="btn-send">Envoyer</button>
-      </div>
-    </div>
-
   </div>
 
   <!-- Security code modal -->

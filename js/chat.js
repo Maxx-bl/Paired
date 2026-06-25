@@ -43,42 +43,44 @@ function appendMessage({ text, sender, timestamp, isOwn }) {
 
 function appendFileMessage({ blob, name, size, isOwn }) {
   const el     = document.createElement('div');
-  el.className = `msg ${isOwn ? 'msg-own' : 'msg-other'}`;
+  el.className = `msg msg-file ${isOwn ? 'msg-own' : 'msg-other'}`;
 
-  const bubble     = document.createElement('div');
-  bubble.className = 'bubble bubble-file';
+  const wrap     = document.createElement('div');
+  wrap.className = 'file-card-wrap';
 
-  const badge       = document.createElement('span');
-  badge.className   = 'file-badge';
-  badge.textContent = getFileExt(name);
+  const card     = document.createElement('div');
+  card.className = 'file-card';
 
-  const info     = document.createElement('div');
-  info.className = 'file-info';
+  const thumb     = document.createElement('div');
+  thumb.className = 'file-thumb';
+  thumb.innerHTML = '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/><rect x="7" y="13" width="10" height="6" rx="1"/><path d="M7 16l2.5-2.5 2 2 1.5-1.5 3 3"/></svg>';
 
-  const fname       = document.createElement('span');
-  fname.className   = 'file-name';
+  const fname     = document.createElement('span');
+  fname.className = 'file-card-name';
   fname.textContent = name;
 
-  const fsize       = document.createElement('span');
-  fsize.className   = 'file-size';
-  fsize.textContent = formatBytes(size);
-
-  info.appendChild(fname);
-  info.appendChild(fsize);
+  card.appendChild(thumb);
+  card.appendChild(fname);
+  wrap.appendChild(card);
 
   if (blob) {
     const url      = URL.createObjectURL(blob);
     const dl       = document.createElement('a');
     dl.href        = url;
     dl.download    = name;
-    dl.className   = 'btn-dl';
-    dl.textContent = 'Télécharger';
-    info.appendChild(dl);
+    dl.className   = 'btn-dl-icon';
+    dl.setAttribute('aria-label', 'Télécharger');
+    dl.innerHTML   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+    wrap.appendChild(dl);
   }
 
-  bubble.appendChild(badge);
-  bubble.appendChild(info);
-  el.appendChild(bubble);
+  el.appendChild(wrap);
+
+  const meta       = document.createElement('div');
+  meta.className   = 'msg-meta';
+  meta.textContent = formatTime(Date.now());
+  el.appendChild(meta);
+
   getMsgsEl().appendChild(el);
   scrollBottom();
 }
@@ -114,6 +116,9 @@ document.getElementById('message-input').addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
+document.getElementById('message-input').addEventListener('input', (e) => {
+  document.getElementById('send-btn').classList.toggle('ready', e.target.value.trim().length > 0);
+});
 
 async function sendMessage() {
   const input = document.getElementById('message-input');
@@ -126,6 +131,7 @@ async function sendMessage() {
 
   appendMessage({ text, sender: state.username, timestamp: Date.now(), isOwn: true });
   input.value = '';
+  document.getElementById('send-btn').classList.remove('ready');
   await sendEncryptedMessage(text);
 }
 
