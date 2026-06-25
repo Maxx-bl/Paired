@@ -530,6 +530,11 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .btn-security:hover { color: var(--ok); }
 
+@keyframes modal-overlay-in  { from { opacity: 0; }               to { opacity: 1; } }
+@keyframes modal-overlay-out { from { opacity: 1; }               to { opacity: 0; } }
+@keyframes modal-card-in     { from { opacity: 0; transform: scale(0.94) translateY(14px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes modal-card-out    { from { opacity: 1; transform: scale(1) translateY(0); }       to { opacity: 0; transform: scale(0.94) translateY(8px); } }
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -539,7 +544,11 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   justify-content: center;
   z-index: 100;
   padding: 24px;
+  animation: 200ms ease modal-overlay-in;
 }
+.modal-overlay.closing { animation: 180ms ease forwards modal-overlay-out; }
+.modal-overlay .modal-card { animation: 260ms cubic-bezier(0.16,1,0.3,1) modal-card-in; }
+.modal-overlay.closing .modal-card { animation: 180ms ease forwards modal-card-out; }
 .modal-card {
   background: var(--surface);
   border-radius: var(--r);
@@ -879,3 +888,57 @@ html { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.18) transparent; }
 :root.dark .messages { scrollbar-color: rgba(255,255,255,0.18) transparent; }
 :root.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
 :root.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
+
+/* ── View Transitions ─────────────────────────────────────────────────────── */
+.brand-name           { view-transition-name: brand-name; }
+.pseudo-section       { view-transition-name: pseudo-field; }
+.connect-pseudo-block { view-transition-name: pseudo-field; }
+.btn-info             { view-transition-name: btn-info; }
+.btn-theme            { view-transition-name: btn-theme; }
+.card                 { view-transition-name: main-card; }
+.chat-card            { view-transition-name: main-card; }
+
+/* Keyframes */
+@keyframes vt-exit-up    { from { opacity:1; translate:0 0;     } to { opacity:0; translate:0 -18px; } }
+@keyframes vt-enter-up   { from { opacity:0; translate:0 18px;  } to { opacity:1; translate:0 0;     } }
+@keyframes vt-exit-down  { from { opacity:1; translate:0 0;     } to { opacity:0; translate:0  18px; } }
+@keyframes vt-enter-down { from { opacity:0; translate:0 -18px; } to { opacity:1; translate:0 0;     } }
+@keyframes vt-exit-left  { from { opacity:1; translate:0 0;     } to { opacity:0; translate:-40px 0; } }
+@keyframes vt-enter-left { from { opacity:0; translate:-40px 0; } to { opacity:1; translate:0 0;     } }
+
+/* Root : slide vertical (le reste du contenu hors éléments nommés) */
+:root[data-vt-dir="forward"]::view-transition-old(root) { animation: 300ms cubic-bezier(.4,0,.2,1) vt-exit-up;    }
+:root[data-vt-dir="forward"]::view-transition-new(root) { animation: 300ms cubic-bezier(.4,0,.2,1) vt-enter-up;   }
+:root[data-vt-dir="back"]::view-transition-old(root)    { animation: 300ms cubic-bezier(.4,0,.2,1) vt-exit-down;  }
+:root[data-vt-dir="back"]::view-transition-new(root)    { animation: 300ms cubic-bezier(.4,0,.2,1) vt-enter-down; }
+
+/* Brand name : groupe épinglé par JS, seul le contenu anime */
+:root[data-vt-dir="forward"]::view-transition-old(brand-name) { animation: 300ms cubic-bezier(.4,0,.2,1) forwards vt-exit-left; mix-blend-mode: normal; }
+:root[data-vt-dir="forward"]::view-transition-new(brand-name) { animation: none; opacity: 0 !important; }
+:root[data-vt-dir="back"]::view-transition-old(brand-name)    { animation: none; opacity: 0 !important; }
+:root[data-vt-dir="back"]::view-transition-new(brand-name)    { animation: 300ms cubic-bezier(.4,0,.2,1) forwards vt-enter-left; mix-blend-mode: normal; }
+
+/* Card : morphing taille/position automatique */
+::view-transition-group(main-card) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(.4,0,.2,1);
+}
+::view-transition-old(main-card),
+::view-transition-new(main-card) { mix-blend-mode: normal; }
+
+/* Pseudo field : tween de position automatique */
+::view-transition-group(pseudo-field) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(.4,0,.2,1);
+}
+::view-transition-old(pseudo-field),
+::view-transition-new(pseudo-field) { mix-blend-mode: normal; }
+
+/* Boutons info/theme : tween de position automatique */
+::view-transition-group(btn-info),
+::view-transition-group(btn-theme) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(.4,0,.2,1);
+}
+::view-transition-old(btn-info),  ::view-transition-new(btn-info),
+::view-transition-old(btn-theme), ::view-transition-new(btn-theme) { mix-blend-mode: normal; }

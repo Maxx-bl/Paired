@@ -75,25 +75,75 @@ document.getElementById('conn-type-badge').addEventListener('click', () => {
   if (!info) return;
   document.getElementById('conn-info-title').textContent = info.title;
   document.getElementById('conn-info-text').textContent  = info.text;
-  document.getElementById('conn-info-modal').style.display = 'flex';
+  openModal('conn-info-modal');
 });
 
-document.getElementById('conn-info-close').addEventListener('click', () => {
-  document.getElementById('conn-info-modal').style.display = 'none';
-});
-
+document.getElementById('conn-info-close').addEventListener('click', () => closeModal('conn-info-modal'));
 document.getElementById('conn-info-modal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+  if (e.target === e.currentTarget) closeModal('conn-info-modal');
 });
 
 webrtcMgr.onFileReceived    = ({ blob, name, size }) => { hideProgress(); appendFileMessage({ blob, name, size, isOwn: false }); };
 webrtcMgr.onReceiveProgress = (pct, name) => showProgress(name, pct, false);
 webrtcMgr.onSendProgress    = (pct, name) => { showProgress(name, pct, true); if (pct >= 1) setTimeout(hideProgress, 800); };
 
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function openModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('closing');
+  el.style.display = 'flex';
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  el.classList.add('closing');
+  setTimeout(() => {
+    if (el.classList.contains('closing')) {
+      el.classList.remove('closing');
+      el.style.display = 'none';
+    }
+  }, 180);
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
+const SCREEN_ORDER = { login: 0, connect: 1, chat: 2 };
+let _savedBrandRect = null;
+
 function showScreen(name) {
-  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
-  document.getElementById(`screen-${name}`).classList.add('active');
+  const current     = document.querySelector('.screen.active');
+  const currentName = current?.id.replace('screen-', '') ?? 'login';
+  const isForward   = (SCREEN_ORDER[name] ?? 0) >= (SCREEN_ORDER[currentName] ?? 0);
+
+  const apply = () => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(`screen-${name}`).classList.add('active');
+  };
+
+  if (!document.startViewTransition) { apply(); return; }
+
+  document.documentElement.dataset.vtDir = isForward ? 'forward' : 'back';
+
+  const brandEl = document.querySelector('#screen-login .brand-name');
+
+  const pinBrand = (rect) => {
+    const el = document.createElement('style');
+    el.id = '__vt_brand_pin';
+    el.textContent = `::view-transition-group(brand-name){animation:none!important;width:${rect.width}px!important;height:${rect.height}px!important;transform:translateX(${rect.left}px) translateY(${rect.top}px)!important;}`;
+    document.head.appendChild(el);
+  };
+  const unpinBrand = () => document.getElementById('__vt_brand_pin')?.remove();
+
+  if (isForward && currentName === 'login' && brandEl) {
+    _savedBrandRect = brandEl.getBoundingClientRect();
+    pinBrand(_savedBrandRect);
+    document.startViewTransition(apply).finished.then(unpinBrand);
+
+  } else if (!isForward && name === 'login' && brandEl && _savedBrandRect) {
+    pinBrand(_savedBrandRect);
+    document.startViewTransition(apply).finished.then(unpinBrand);
+
+  } else {
+    document.startViewTransition(apply);
+  }
 }
 
 // ── Username check ────────────────────────────────────────────────────────────
@@ -468,13 +518,10 @@ document.getElementById('security-btn').addEventListener('click', async () => {
   if (!groups) return;
   const display = document.getElementById('security-code-display');
   display.innerHTML = groups.map((g) => `<span class="code-group">${g}</span>`).join('');
-  document.getElementById('security-modal').style.display = 'flex';
+  openModal('security-modal');
 });
 
-document.getElementById('security-modal-close').addEventListener('click', () => {
-  document.getElementById('security-modal').style.display = 'none';
-});
-
+document.getElementById('security-modal-close').addEventListener('click', () => closeModal('security-modal'));
 document.getElementById('security-modal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+  if (e.target === e.currentTarget) closeModal('security-modal');
 });
