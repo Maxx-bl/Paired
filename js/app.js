@@ -323,6 +323,7 @@ async function enterRoom(roomId, partnerUsername, role, sessionDuration = 60) {
   setupWebRTCSignaling(roomId, role);
   setupPartnerLeftListener(roomId);
 
+  document.querySelector('.chat-avatar .presence-dot')?.classList.remove('offline');
   showScreen('chat');
   initChatScreen(partnerUsername);
   startTimer(sessionDuration * 60);
@@ -372,6 +373,7 @@ function setupPartnerLeftListener(roomId) {
       metaWasSet = true;
     } else if (metaWasSet && state.roomId && !state.leaving) {
       state.partnerLeft = true;
+      document.querySelector('.chat-avatar .presence-dot')?.classList.add('offline');
       appendSystemMessage(`${state.partnerUsername} a quitté la conversation.`);
       document.getElementById('message-input').disabled = true;
       document.getElementById('send-btn').disabled = true;

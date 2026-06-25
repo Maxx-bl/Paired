@@ -16,13 +16,47 @@ const NOUNS = [
 
 let checkTimer = null;
 
+// ── Theme toggle ─────────────────────────────────────────────────────────────
+
+const MOON_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+const SUN_SVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+
+function updateThemeIcons(isDark) {
+  document.querySelectorAll('.btn-theme').forEach(btn => { btn.innerHTML = isDark ? SUN_SVG : MOON_SVG; });
+}
+
+updateThemeIcons(document.documentElement.classList.contains('dark'));
+
+document.querySelectorAll('.btn-theme').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateThemeIcons(isDark);
+  });
+});
+
+// ── Info modal ────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.btn-info').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('info-modal').style.display = 'flex';
+  });
+});
+
+document.getElementById('info-modal-close').addEventListener('click', () => {
+  document.getElementById('info-modal').style.display = 'none';
+});
+
+document.getElementById('info-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+});
+
 // ── Screen: Login ─────────────────────────────────────────────────────────────
 
 document.getElementById('generate-btn').addEventListener('click', () => {
-  const adj      = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun     = NOUNS[Math.floor(Math.random() * NOUNS.length)];
   const num      = Math.floor(Math.random() * 90) + 10;
-  const username = `${adj}${noun}${num}`.toLowerCase();
+  const username = `${noun}${num}`.toLowerCase();
   document.getElementById('username-input').value = username;
   triggerCheck(username);
 });
@@ -80,6 +114,20 @@ async function triggerCheck(val) {
 
 // ── Screen: Connect ───────────────────────────────────────────────────────────
 
+document.getElementById('duration-toggle').addEventListener('click', () => {
+  document.getElementById('duration-toggle').style.display = 'none';
+  document.getElementById('duration-input').style.display = '';
+  document.getElementById('duration-unit-label').style.display = '';
+  document.getElementById('duration-input').focus();
+});
+
+document.getElementById('duration-unit-label').addEventListener('click', () => {
+  document.getElementById('duration-input').style.display = 'none';
+  document.getElementById('duration-unit-label').style.display = 'none';
+  document.getElementById('duration-toggle').style.display = '';
+  // La valeur saisie est conservée en mémoire dans l'input
+});
+
 // Back button: properly cancels any pending state and frees the username
 document.getElementById('back-btn').addEventListener('click', async () => {
   const btn = document.getElementById('back-btn');
@@ -115,6 +163,7 @@ document.getElementById('partner-input').addEventListener('input', (e) => {
   const pos = e.target.selectionStart;
   e.target.value = e.target.value.toLowerCase();
   e.target.setSelectionRange(pos, pos);
+  document.getElementById('connect-btn').disabled = e.target.value.trim().length === 0;
 });
 
 document.getElementById('partner-input').addEventListener('keydown', (e) => {
@@ -164,8 +213,11 @@ function resetLoginScreens() {
   document.getElementById('next-btn').disabled = true;
   document.getElementById('partner-input').value = '';
   document.getElementById('duration-input').value = '';
+  document.getElementById('duration-input').style.display = 'none';
+  document.getElementById('duration-unit-label').style.display = 'none';
+  document.getElementById('duration-toggle').style.display = '';
   setStatus('connect-status', '', '');
-  document.getElementById('connect-btn').disabled = false;
+  document.getElementById('connect-btn').disabled = true;
   clearInviteCards();
 }
 
@@ -210,11 +262,28 @@ function syncInviteCards(snap) {
     if (!active.has(card.dataset.roomId)) card.remove();
   });
 
-  const list = document.getElementById('invitations-list');
-  list.style.display = list.childElementCount > 0 ? 'flex' : 'none';
+  updateInvitationsUI();
 }
 
 // ── Invitation cards UI ───────────────────────────────────────────────────────
+
+function updateInvitationsUI() {
+  const list   = document.getElementById('invitations-list');
+  const header = document.getElementById('invitations-header');
+  const waiting = document.getElementById('waiting-hint');
+  const count  = list.childElementCount;
+
+  if (count > 0) {
+    list.style.display = 'flex';
+    header.style.display = '';
+    header.textContent = count === 1 ? 'Invitation reçue : 1' : `Invitations reçues : ${count}`;
+    if (waiting) waiting.style.display = 'none';
+  } else {
+    list.style.display = 'none';
+    header.style.display = 'none';
+    if (waiting) waiting.style.display = '';
+  }
+}
 
 function showInviteCard(from, roomId, theirDuration = 60) {
   const list = document.getElementById('invitations-list');
@@ -235,11 +304,13 @@ function showInviteCard(from, roomId, theirDuration = 60) {
 
   const acceptBtn = document.createElement('button');
   acceptBtn.className = 'btn-accept';
-  acceptBtn.textContent = 'Accepter';
+  acceptBtn.setAttribute('aria-label', 'Accepter');
+  acceptBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
   const declineBtn = document.createElement('button');
   declineBtn.className = 'btn-decline';
-  declineBtn.textContent = 'Refuser';
+  declineBtn.setAttribute('aria-label', 'Refuser');
+  declineBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 
   acceptBtn.addEventListener('click', async () => {
     acceptBtn.disabled = true;
@@ -258,18 +329,18 @@ function showInviteCard(from, roomId, theirDuration = 60) {
   card.appendChild(fromEl);
   card.appendChild(actions);
   list.appendChild(card);
-  list.style.display = 'flex';
+  updateInvitationsUI();
 }
 
 function removeInviteCard(roomId) {
   const list = document.getElementById('invitations-list');
   const card = list.querySelector(`[data-room-id="${roomId}"]`);
   if (card) card.remove();
-  if (list.childElementCount === 0) list.style.display = 'none';
+  updateInvitationsUI();
 }
 
 function clearInviteCards() {
   const list = document.getElementById('invitations-list');
   list.innerHTML = '';
-  list.style.display = 'none';
+  updateInvitationsUI();
 }
