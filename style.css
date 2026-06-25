@@ -326,15 +326,29 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
 .connect-inputs input[type="text"]:focus { border: none; box-shadow: none; }
 .connect-inputs .btn-icon {
   border-radius: 0;
+  border: none;
   border-left: 1px solid var(--border);
   background: transparent;
   width: 42px;
+  max-width: 42px;
   height: 38px;
+  overflow: hidden;
+  transition: max-width 220ms cubic-bezier(.4,0,.2,1), opacity 180ms ease;
 }
 .connect-inputs .btn-icon:hover { background: var(--surface2); }
+.connect-inputs.dur-open .btn-icon {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  border-left-color: transparent;
+}
 .duration-input {
   width: 38px;
+  max-width: 0;
   flex-shrink: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
   background: #ffffff;
   border: none;
   border-left: 1px solid var(--border);
@@ -342,10 +356,19 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   border-radius: 0;
   color: var(--text);
   font-size: 14px;
-  padding: 9px 4px;
+  padding: 9px 0;
   outline: none;
   text-align: center;
   -moz-appearance: textfield;
+  transition: max-width 260ms cubic-bezier(.4,0,.2,1),
+              padding   260ms cubic-bezier(.4,0,.2,1),
+              opacity   200ms ease;
+}
+.connect-inputs.dur-open .duration-input {
+  max-width: 60px;
+  padding: 9px 4px;
+  opacity: 1;
+  pointer-events: auto;
 }
 .duration-input::placeholder { color: var(--text-muted); opacity: 1; }
 .duration-input::-webkit-inner-spin-button,
@@ -356,11 +379,22 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   flex-shrink: 0;
   white-space: nowrap;
   width: 48px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
   text-align: center;
   cursor: pointer;
   user-select: none;
   position: relative;
-  transition: color 0.15s;
+  transition: max-width 260ms cubic-bezier(.4,0,.2,1),
+              opacity   200ms ease,
+              color     0.15s;
+}
+.connect-inputs.dur-open .duration-unit {
+  max-width: 70px;
+  opacity: 1;
+  pointer-events: auto;
 }
 .duration-unit::after {
   content: '✕';

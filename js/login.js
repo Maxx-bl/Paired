@@ -110,17 +110,12 @@ async function triggerCheck(val) {
 // ── Screen: Connect ───────────────────────────────────────────────────────────
 
 document.getElementById('duration-toggle').addEventListener('click', () => {
-  document.getElementById('duration-toggle').style.display = 'none';
-  document.getElementById('duration-input').style.display = '';
-  document.getElementById('duration-unit-label').style.display = '';
+  document.querySelector('.connect-inputs').classList.add('dur-open');
   document.getElementById('duration-input').focus();
 });
 
 document.getElementById('duration-unit-label').addEventListener('click', () => {
-  document.getElementById('duration-input').style.display = 'none';
-  document.getElementById('duration-unit-label').style.display = 'none';
-  document.getElementById('duration-toggle').style.display = '';
-  // La valeur saisie est conservée en mémoire dans l'input
+  document.querySelector('.connect-inputs').classList.remove('dur-open');
 });
 
 // Back button: properly cancels any pending state and frees the username
@@ -208,9 +203,7 @@ function resetLoginScreens() {
   document.getElementById('next-btn').disabled = true;
   document.getElementById('partner-input').value = '';
   document.getElementById('duration-input').value = '';
-  document.getElementById('duration-input').style.display = 'none';
-  document.getElementById('duration-unit-label').style.display = 'none';
-  document.getElementById('duration-toggle').style.display = '';
+  document.querySelector('.connect-inputs')?.classList.remove('dur-open');
   setStatus('connect-status', '', '');
   document.getElementById('connect-btn').disabled = true;
   clearInviteCards();
