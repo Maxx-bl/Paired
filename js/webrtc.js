@@ -18,7 +18,11 @@ const STUN_ONLY = [
 
 async function fetchIceServers() {
   try {
-    const res = await fetch(TURN_WORKER_URL);
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error('No auth token');
+    const res = await fetch(TURN_WORKER_URL, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const servers = await res.json();
     console.log('[TURN] credentials OK:', JSON.stringify(servers));
