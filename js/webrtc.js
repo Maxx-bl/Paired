@@ -24,9 +24,7 @@ async function fetchIceServers() {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const servers = await res.json();
-    console.log('[TURN] credentials OK:', JSON.stringify(servers));
-    return servers;
+    return await res.json();
   } catch (err) {
     console.warn('[TURN] credentials unavailable, falling back to STUN only:', err);
     return STUN_ONLY;
