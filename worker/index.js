@@ -1,7 +1,5 @@
 const ALLOWED_ORIGINS = new Set([
   'https://paired.synae.dev',
-  'http://127.0.0.1:5500',
-  'http://localhost:5500',
 ]);
 
 const FIREBASE_PROJECT_ID = 'paired-a18ad';
