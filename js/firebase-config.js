@@ -9,4 +9,11 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db   = firebase.database();
+const auth = firebase.auth();
+const authReady = new Promise((resolve, reject) => {
+  const unsub = auth.onAuthStateChanged(user => {
+    if (user) { unsub(); resolve(user); }
+    else { auth.signInAnonymously().catch(reject); }
+  }, reject);
+});

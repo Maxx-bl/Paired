@@ -154,12 +154,13 @@ async function checkUsernameAvailable(username) {
 
 // ── Register username ─────────────────────────────────────────────────────────
 async function registerUsername(username) {
+  await authReady;
   const available = await checkUsernameAvailable(username);
   if (!available) throw new Error('Pseudo déjà utilisé');
 
   const presRef = db.ref(`presence/${username}`);
   await presRef.onDisconnect().remove();
-  await presRef.set({ ts: firebase.database.ServerValue.TIMESTAMP });
+  await presRef.set({ ts: firebase.database.ServerValue.TIMESTAMP, uid: auth.currentUser.uid });
 
   state.username = username;
 
