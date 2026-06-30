@@ -503,6 +503,29 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
 .header-center { display: flex; align-items: center; justify-content: center; }
 .header-right { display: flex; align-items: center; gap: 14px; flex: 1; justify-content: flex-end; }
 
+.header-anchor { display: none; }
+
+.btn-settings { display: none; }
+@media (max-width: 600px) {
+  .btn-settings { display: flex; }
+}
+
+.settings-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.settings-row-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 /* Avatar */
 .chat-avatar {
   width: 32px;

@@ -73,6 +73,7 @@ document.getElementById('conn-type-badge').addEventListener('click', () => {
   const type  = badge.textContent.trim();
   const info  = CONN_INFO[type];
   if (!info) return;
+  closeModal('settings-modal');
   document.getElementById('conn-info-title').textContent = info.title;
   document.getElementById('conn-info-text').textContent  = info.text;
   openModal('conn-info-modal');
@@ -81,6 +82,34 @@ document.getElementById('conn-type-badge').addEventListener('click', () => {
 document.getElementById('conn-info-close').addEventListener('click', () => closeModal('conn-info-modal'));
 document.getElementById('conn-info-modal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeModal('conn-info-modal');
+});
+
+// ── Header controls relocation (mobile: collapse into settings popup) ─────────
+const HEADER_SETTINGS_ITEMS = [
+  ['conn-anchor',     'conn-anchor-modal',     'conn-type-badge'],
+  ['security-anchor', 'security-anchor-modal', 'security-btn'],
+  ['theme-anchor',    'theme-anchor-modal',    'chat-theme-btn'],
+  ['timer-anchor',    'timer-anchor-modal',    'timer'],
+];
+
+function relocateHeaderControls(isMobile) {
+  HEADER_SETTINGS_ITEMS.forEach(([headerAnchorId, modalAnchorId, elId]) => {
+    const headerAnchor = document.getElementById(headerAnchorId);
+    const modalAnchor   = document.getElementById(modalAnchorId);
+    const el            = document.getElementById(elId);
+    if (!headerAnchor || !modalAnchor || !el) return;
+    (isMobile ? modalAnchor : headerAnchor).before(el);
+  });
+}
+
+const MOBILE_HEADER_MQ = window.matchMedia('(max-width: 600px)');
+relocateHeaderControls(MOBILE_HEADER_MQ.matches);
+MOBILE_HEADER_MQ.addEventListener('change', (e) => relocateHeaderControls(e.matches));
+
+document.getElementById('settings-btn').addEventListener('click', () => openModal('settings-modal'));
+document.getElementById('settings-modal-close').addEventListener('click', () => closeModal('settings-modal'));
+document.getElementById('settings-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal('settings-modal');
 });
 
 webrtcMgr.onFileReceived    = ({ blob, name, size }) => { hideProgress(); appendFileMessage({ blob, name, size, isOwn: false }); };
@@ -517,6 +546,7 @@ function setStatus(id, text, type) {
 document.getElementById('security-btn').addEventListener('click', async () => {
   const groups = await cryptoMgr.securityCode();
   if (!groups) return;
+  closeModal('settings-modal');
   const display = document.getElementById('security-code-display');
   display.innerHTML = groups.map((g) => `<span class="code-group">${g}</span>`).join('');
   openModal('security-modal');

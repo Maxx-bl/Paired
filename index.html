@@ -107,7 +107,9 @@
             <div class="presence-dot"></div>
           </div>
           <span id="chat-with" class="partner-name"></span>
+          <span id="conn-anchor" class="header-anchor"></span>
           <span id="conn-type-badge" class="conn-badge" style="display:none"></span>
+          <span id="security-anchor" class="header-anchor"></span>
           <button id="security-btn" class="btn-security" style="display:none" title="Vérifier le code de sécurité">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -115,12 +117,20 @@
           </button>
         </div>
         <div class="header-center">
-          <button class="btn-icon btn-theme" aria-label="Mode sombre">
+          <span id="theme-anchor" class="header-anchor"></span>
+          <button id="chat-theme-btn" class="btn-icon btn-theme" aria-label="Mode sombre">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </button>
         </div>
         <div class="header-right">
+          <span id="timer-anchor" class="header-anchor"></span>
           <span id="timer" class="timer">60:00</span>
+          <button id="settings-btn" class="btn-icon btn-settings" aria-label="Paramètres" title="Paramètres">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.18H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
           <button id="leave-btn" class="btn-leave">Quitter</button>
         </div>
       </div>
@@ -157,6 +167,34 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Chat settings modal (mobile) -->
+  <div id="settings-modal" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Paramètres</span>
+        <button id="settings-modal-close" class="modal-close">✕</button>
+      </div>
+      <div class="settings-modal-body">
+        <div class="settings-row">
+          <span class="settings-row-label">Connexion</span>
+          <span id="conn-anchor-modal" class="header-anchor"></span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Sécurité</span>
+          <span id="security-anchor-modal" class="header-anchor"></span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Thème</span>
+          <span id="theme-anchor-modal" class="header-anchor"></span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Temps restant</span>
+          <span id="timer-anchor-modal" class="header-anchor"></span>
+        </div>
+      </div>
     </div>
   </div>
 
