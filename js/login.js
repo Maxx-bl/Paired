@@ -98,6 +98,7 @@ document.getElementById('username-input').addEventListener('input', (e) => {
   document.getElementById('next-btn').disabled = true;
   clearTimeout(checkTimer);
   const val = e.target.value.trim();
+  if (val.length === 0) localStorage.removeItem('lastUsername');
   if (val.length < 3) {
     setStatus('username-status', val.length > 0 ? 'Minimum 3 caractères' : '', val.length > 0 ? 'error' : '');
     return;
@@ -153,7 +154,8 @@ async function triggerCheck(val) {
 
 document.getElementById('duration-toggle').addEventListener('click', () => {
   document.querySelector('.connect-inputs').classList.add('dur-open');
-  document.getElementById('duration-input').focus();
+  // Curseur affiché 250ms après la fin de l'animation d'ouverture (260ms)
+  setTimeout(() => document.getElementById('duration-input').focus(), 510);
 });
 
 document.getElementById('duration-unit-label').addEventListener('click', () => {
@@ -240,9 +242,11 @@ document.getElementById('connect-btn').addEventListener('click', async () => {
 // ── Reset ─────────────────────────────────────────────────────────────────────
 
 function resetLoginScreens() {
-  document.getElementById('username-input').value = '';
+  const lastUsername = localStorage.getItem('lastUsername') || '';
+  document.getElementById('username-input').value = lastUsername;
   setStatus('username-status', '', '');
   document.getElementById('next-btn').disabled = true;
+  if (lastUsername) triggerCheck(lastUsername);
   document.getElementById('partner-input').value = '';
   document.getElementById('duration-input').value = '';
   document.querySelector('.connect-inputs')?.classList.remove('dur-open');
