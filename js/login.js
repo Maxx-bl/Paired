@@ -81,6 +81,7 @@ document.getElementById('next-btn').addEventListener('click', async () => {
   document.getElementById('next-btn').disabled = true;
   try {
     await registerUsername(username);
+    localStorage.setItem('lastUsername', username);
     document.getElementById('my-username-display').textContent = username;
     showScreen('connect');
   } catch (err) {
@@ -88,6 +89,13 @@ document.getElementById('next-btn').addEventListener('click', async () => {
     document.getElementById('next-btn').disabled = false;
   }
 });
+
+// Preload last used pseudo so returning users can just hit "Confirmer"
+const lastUsername = localStorage.getItem('lastUsername');
+if (lastUsername) {
+  document.getElementById('username-input').value = lastUsername;
+  triggerCheck(lastUsername);
+}
 
 async function triggerCheck(val) {
   if (!/^[a-z0-9]{3,20}$/.test(val)) {
