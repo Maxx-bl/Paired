@@ -46,6 +46,30 @@ document.getElementById('info-modal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeModal('info-modal');
 });
 
+// ── PWA install ───────────────────────────────────────────────────────────────
+
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  installBtn.style.display = 'block';
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtn.style.display = 'none';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  installBtn.style.display = 'none';
+});
+
 // ── Screen: Login ─────────────────────────────────────────────────────────────
 
 document.getElementById('generate-btn').addEventListener('click', () => {
