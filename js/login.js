@@ -50,6 +50,12 @@ document.getElementById('info-modal').addEventListener('click', (e) => {
 
 let deferredInstallPrompt = null;
 const installBtn = document.getElementById('install-btn');
+const installInstructions = document.getElementById('install-instructions');
+
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+if (!isStandalone) installBtn.style.display = 'block';
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -58,16 +64,23 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 installBtn.addEventListener('click', async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  installBtn.style.display = 'none';
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.style.display = 'none';
+    return;
+  }
+  installInstructions.textContent = isIOS
+    ? "Appuyez sur le bouton Partager, puis sur \"Sur l'écran d'accueil\"."
+    : "Ouvrez le menu de votre navigateur (⋮) puis sélectionnez \"Installer l'application\" ou \"Ajouter à l'écran d'accueil\".";
+  installInstructions.style.display = 'block';
 });
 
 window.addEventListener('appinstalled', () => {
   deferredInstallPrompt = null;
   installBtn.style.display = 'none';
+  installInstructions.style.display = 'none';
 });
 
 // ── Screen: Login ─────────────────────────────────────────────────────────────
