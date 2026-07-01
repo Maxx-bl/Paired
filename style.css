@@ -46,7 +46,7 @@ html, body {
 .card {
   background: var(--surface);
   border-radius: var(--r);
-  border: 1px solid #ffffff;
+  border: 2px solid #ffffff;
   box-shadow: 0 6px 40px rgba(0, 0, 0, 0.12);
   padding: 36px 36px;
   width: 100%;
@@ -96,9 +96,8 @@ html, body {
   justify-content: center;
   color: var(--title);
   flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s;
 }
-.btn-icon:hover { background: #eeeeee; }
+.btn-icon:hover { background: #eeeeee; transition: background 0.15s; }
 
 /* Tagline block */
 .tagline-block {
@@ -156,9 +155,8 @@ html, body {
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
 }
-.btn-generate:hover { background: #eeeeee; color: #949494; }
+.btn-generate:hover { background: #eeeeee; color: #949494; transition: background 0.15s, color 0.15s; }
 .pseudo-section .field-status { margin-top: -6px; }
 #next-btn { margin-top: -10px; }
 
@@ -204,9 +202,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
 }
-.btn-primary:hover:not(:disabled) { background: #5a5a5a; border-color: #5a5a5a; }
+.btn-primary:hover:not(:disabled) { background: #5a5a5a; border-color: #5a5a5a; transition: background 0.15s, border-color 0.15s; }
 .btn-primary:disabled {
   background: var(--surface);
   border-color: var(--border);
@@ -228,9 +225,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--border);
-  transition: color 0.15s;
 }
-.btn-link:hover { color: var(--text); }
+.btn-link:hover { color: var(--text); transition: color 0.15s; }
 
 .btn-back {
   background: none;
@@ -244,9 +240,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--border);
-  transition: color 0.15s;
 }
-.btn-back:hover { color: var(--text); }
+.btn-back:hover { color: var(--text); transition: color 0.15s; }
 
 /* Field status */
 .field-status {
@@ -360,9 +355,9 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   max-width: 42px;
   height: 38px;
   overflow: hidden;
-  transition: max-width 220ms cubic-bezier(.4,0,.2,1), opacity 180ms ease, color 0.15s;
+  transition: max-width 220ms cubic-bezier(.4,0,.2,1), opacity 180ms ease;
 }
-.connect-inputs .btn-icon:hover { background: var(--surface2); color: #a8a8a8; }
+.connect-inputs .btn-icon:hover { background: var(--surface2); color: #a8a8a8; transition: background 0.15s, color 0.15s; }
 .connect-inputs.dur-open .btn-icon {
   max-width: 0;
   opacity: 0;
@@ -489,10 +484,10 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, opacity 0.15s;
+  transition: opacity 0.15s;
 }
-.btn-accept:hover:not(:disabled)  { background: #2e2c2a; }
-.btn-decline:hover:not(:disabled) { background: #2e2c2a; }
+.btn-accept:hover:not(:disabled)  { background: #2e2c2a; transition: background 0.15s; }
+.btn-decline:hover:not(:disabled) { background: #2e2c2a; transition: background 0.15s; }
 .btn-accept:disabled,
 .btn-decline:disabled { opacity: 0.38; cursor: not-allowed; }
 
@@ -506,7 +501,7 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
 .chat-card {
   background: var(--surface);
   border-radius: var(--r);
-  border: 1px solid #ffffff;
+  border: 2px solid #ffffff;
   box-shadow: 0 6px 40px rgba(0,0,0,0.12);
   width: 100%;
   max-width: 700px;
@@ -616,9 +611,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   color: var(--text-muted);
   padding: 2px;
   border-radius: 3px;
-  transition: color 0.15s;
 }
-.btn-security:hover { color: var(--ok); }
+.btn-security:hover { color: var(--ok); transition: color 0.15s; }
 
 @keyframes modal-overlay-in  { from { opacity: 0; }               to { opacity: 1; } }
 @keyframes modal-overlay-out { from { opacity: 1; }               to { opacity: 0; } }
@@ -642,7 +636,7 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
 .modal-card {
   background: var(--surface);
   border-radius: var(--r);
-  border: 1px solid #ffffff;
+  border: 2px solid #ffffff;
   padding: 24px;
   width: 100%;
   max-width: 340px;
@@ -667,9 +661,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   padding: 2px 4px;
   border-radius: 3px;
   line-height: 1;
-  transition: color 0.15s;
 }
-.modal-close:hover { color: var(--text); }
+.modal-close:hover { color: var(--text); transition: color 0.15s; }
 .modal-hint {
   font-size: 12px;
   color: var(--text-muted);
@@ -711,9 +704,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   font-family: inherit;
   padding: 7px 16px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
 }
-.btn-leave:hover { background: var(--surface2); color: var(--text); }
+.btn-leave:hover { background: var(--surface2); color: var(--text); transition: background 0.15s, color 0.15s; }
 
 /* Messages */
 .messages {
@@ -826,9 +818,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   color: var(--text-muted);
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s, color 0.15s;
 }
-.btn-dl-icon:hover { background: var(--surface2); color: var(--text); }
+.btn-dl-icon:hover { background: var(--surface2); color: var(--text); transition: background 0.15s, color 0.15s; }
 
 /* Drop overlay */
 .drop-overlay {
@@ -901,16 +892,15 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   height: 38px;
   flex-shrink: 0;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
-.btn-send:hover:not(:disabled):not(.ready) { background: var(--border); color: var(--text); }
+.btn-send:hover:not(:disabled):not(.ready) { background: var(--border); color: var(--text); transition: background 0.15s, color 0.15s; }
 .btn-send.ready {
   background: #3a3735;
   border-color: transparent;
   color: #ffffff;
 }
-.btn-send.ready:hover { background: #2e2c2a; }
+.btn-send.ready:hover { background: #2e2c2a; transition: background 0.15s; }
 .btn-send:disabled { opacity: 0.38; cursor: not-allowed; }
 
 .btn-file {
@@ -925,9 +915,8 @@ input:disabled { opacity: 0.45; cursor: not-allowed; }
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
 }
-.btn-file:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+.btn-file:hover:not(:disabled) { background: var(--surface2); color: var(--text); transition: background 0.15s, color 0.15s; }
 .btn-file.p2p-ready { color: var(--text-muted); }
 .btn-file:disabled { opacity: 0.38; cursor: not-allowed; }
 
